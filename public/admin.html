@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LMD Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#09090b;color:#fafafa;font-family:Inter,sans-serif}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+.wrap{display:flex;min-height:100vh}
+.side{width:220px;background:#131316;border-right:1px solid #1e1e24;display:flex;flex-direction:column;flex-shrink:0}
+.side-logo{padding:16px;border-bottom:1px solid #1e1e24;font-family:Outfit;font-weight:800;font-size:16px;color:#fff}
+.side-logo span{color:#f97316}
+.side-nav{padding:8px 6px;flex:1}
+.side-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;text-align:left;background:transparent;color:#71717a;font-family:Outfit;font-weight:600;font-size:13px;transition:all .15s}
+.side-btn.active{background:rgba(249,115,22,.12);color:#f97316}
+.side-btn:hover{background:rgba(249,115,22,.06)}
+.main{flex:1;overflow:auto}
+.top{padding:12px 24px;border-bottom:1px solid #1e1e24;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(9,9,11,.95);backdrop-filter:blur(10px);z-index:50}
+.content{padding:24px;max-width:1100px;margin:0 auto}
+.card{background:#131316;border:1px solid #1e1e24;border-radius:10px;padding:20px}
+.stat{text-align:center;padding:16px}
+.stat-val{font-family:Outfit;font-weight:800;font-size:24px}
+.stat-lbl{font-size:11px;color:#71717a;margin-top:2px}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+h2{font-family:Outfit;font-weight:700;font-size:20px;margin-bottom:16px;letter-spacing:-.02em}
+h3{font-family:Outfit;font-weight:700;font-size:15px;margin-bottom:8px}
+.pill{display:inline-block;font-size:10px;font-weight:700;font-family:Outfit;text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:100px}
+.btn{font-family:Outfit;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;transition:all .15s}
+.btn-orange{background:#f97316;color:#09090b}.btn-red{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.btn-green{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.btn-gray{background:#1e1e24;color:#a1a1aa}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-family:Outfit;font-weight:600;font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #1e1e24}
+td{padding:8px 10px;border-bottom:1px solid #1e1e24;color:#a1a1aa}
+tr:hover td{background:rgba(255,255,255,.02)}
+.online-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.login-box{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{max-width:360px;width:100%;text-align:center}
+input{width:100%;background:#09090b;border:1px solid #1e1e24;border-radius:8px;padding:10px 14px;color:#fafafa;font-family:Inter;font-size:14px;outline:none;margin-bottom:12px}
+.toast{position:fixed;top:16px;right:16px;z-index:9999;background:#131316;border:1px solid #1e1e24;border-radius:10px;padding:12px 20px;font-family:Outfit;font-weight:600;font-size:13px;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+@media(max-width:768px){.side{display:none}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const $ = (s, p) => (p||document).querySelector(s);
+const $$ = (s, p) => [...(p||document).querySelectorAll(s)];
+const h = (tag, attrs, ...kids) => {
+  const el = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k,v]) => { if (k === 'style' && typeof v === 'object') Object.assign(el.style, v); else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v); else el.setAttribute(k, v); });
+  kids.flat().forEach(c => { if (c == null) return; el.append(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return el;
+};
+
+let adminEmail = localStorage.getItem('lmd_admin_email');
+let section = 'overview';
+let stats = null;
+let customers = []; let designers = []; let gigs = []; let payoutData = [];
+let toast = '';
+
+const api = async (action, data = {}, method = 'POST') => {
+  const isGet = method === 'GET';
+  const params = isGet ? '?' + new URLSearchParams({ action, ...data }) : '';
+  const r = await fetch('/api/admin' + params, {
+    method, headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail },
+    body: isGet ? undefined : JSON.stringify({ action, ...data }),
+  });
+  return r.json();
+};
+
+const showToast = (msg) => { toast = msg; render(); setTimeout(() => { toast = ''; render(); }, 3000); };
+
+const loadStats = async () => { const r = await api('dashboard_stats', {}, 'GET'); if (!r.error) stats = r; };
+const loadCustomers = async () => { const r = await api('get_customers', {}, 'GET'); if (r.customers) customers = r.customers; };
+const loadDesigners = async () => { const r = await api('get_designers', {}, 'GET'); if (r.designers) designers = r.designers; };
+const loadGigs = async () => { const r = await api('get_all_gigs', {}, 'GET'); if (r.gigs) gigs = r.gigs; };
+const loadPayouts = async () => { const r = await api('get_payout_queue', {}, 'GET'); if (r.designers) payoutData = r.designers; };
+
+const deleteCustomer = async (id) => { if (!confirm('Delete this customer and all their gigs?')) return; await api('delete_customer', { customer_id: id }); showToast('Customer deleted'); await loadCustomers(); await loadStats(); render(); };
+const deleteDesigner = async (id) => { if (!confirm('Delete this designer?')) return; await api('delete_designer', { designer_id: id }); showToast('Designer deleted'); await loadDesigners(); await loadStats(); render(); };
+const toggleApproval = async (id, val) => { await api('toggle_designer_approval', { designer_id: id, is_approved: val }); showToast(val ? 'Approved' : 'Suspended'); await loadDesigners(); render(); };
+const markPaid = async (pid) => { await api('update_payout', { payout_id: pid, status: 'paid' }); showToast('Marked as paid'); await loadPayouts(); render(); };
+const createPayout = async (d) => { await api('create_payout', { designer_id: d.id, amount: d.owing, bank_name: d.bank_name || '', bank_account: d.bank_account || '' }); showToast('Payout created'); await loadPayouts(); render(); };
+
+function renderLogin() {
+  const app = $('#app');
+  app.innerHTML = '';
+  const box = h('div', { class: 'login-box' },
+    h('div', { class: 'login-card' },
+      h('div', { style: { fontFamily: 'Outfit', fontWeight: 800, fontSize: '22px', color: '#fff', marginBottom: '8px' } }, h('span', { style: { color: '#f97316' } }, 'lastminute'), '.design'),
+      h('div', { style: { color: '#71717a', fontSize: '14px', marginBottom: '24px' } }, 'Admin Dashboard'),
+      h('div', { class: 'card', style: { padding: '24px', textAlign: 'left' } },
+        h('label', { style: { display: 'block', marginBottom: '6px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase', letterSpacing: '.08em' } }, 'Admin Email'),
+        h('input', { type: 'email', id: 'admin-email', placeholder: 'your@email.com' }),
+        h('button', { class: 'btn btn-orange', style: { width: '100%', padding: '10px', fontSize: '14px' }, onClick: async () => {
+          const email = $('#admin-email').value;
+          if (!email) return;
+          adminEmail = email;
+          localStorage.setItem('lmd_admin_email', email);
+          await loadStats();
+          if (!stats) { showToast('Not an admin'); adminEmail = null; localStorage.removeItem('lmd_admin_email'); render(); return; }
+          await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]);
+          render();
+        }}, 'Sign In')
+      )
+    )
+  );
+  app.append(box);
+}
+
+function render() {
+  if (!adminEmail || !stats) { renderLogin(); return; }
+  const app = $('#app');
+  app.innerHTML = '';
+
+  if (toast) app.append(h('div', { class: 'toast' }, h('span', { style: { color: '#f97316' } }, '● '), toast));
+
+  const sideItems = [
+    { icon: '📊', label: 'Overview', key: 'overview' },
+    { icon: '👥', label: 'Customers', key: 'customers' },
+    { icon: '🎨', label: 'Designers', key: 'designers' },
+    { icon: '📋', label: 'Gigs', key: 'gigs' },
+    { icon: '💸', label: 'Payouts', key: 'payouts' },
+    { icon: '🟢', label: 'Online Now', key: 'online' },
+  ];
+
+  const sidebar = h('div', { class: 'side' },
+    h('div', { class: 'side-logo' }, h('span', null, 'LMD'), ' Admin'),
+    h('div', { class: 'side-nav' }, ...sideItems.map(i =>
+      h('button', { class: 'side-btn' + (section === i.key ? ' active' : ''), onClick: () => { section = i.key; render(); } }, i.icon + ' ' + i.label)
+    )),
+    h('div', { style: { padding: '10px', borderTop: '1px solid #1e1e24' } },
+      h('button', { class: 'btn btn-gray', style: { width: '100%' }, onClick: () => { adminEmail = null; localStorage.removeItem('lmd_admin_email'); stats = null; render(); }}, 'Sign Out')
+    )
+  );
+
+  const content = h('div', { class: 'content' });
+
+  // OVERVIEW
+  if (section === 'overview') {
+    content.append(h('h2', null, 'Platform Overview'));
+    const sg = h('div', { class: 'grid g4', style: { marginBottom: '20px' } });
+    [
+      { l: 'Total Revenue', v: 'R' + stats.totalRevenue.toLocaleString(), c: '#f97316' },
+      { l: 'Platform Fee (25%)', v: 'R' + stats.platformFee.toLocaleString(), c: '#fb923c' },
+      { l: 'Designer Payouts (75%)', v: 'R' + stats.designerPayouts.toLocaleString(), c: '#06b6d4' },
+      { l: 'Avg Rating', v: stats.avgRating + '★', c: '#eab308' },
+    ].forEach(s => sg.append(h('div', { class: 'card stat' }, h('div', { class: 'stat-val', style: { color: s.c } }, s.v), h('div', { class: 'stat-lbl' }, s.l))));
+    content.append(sg);
+
+    const sg2 = h('div', { class: 'grid g4', style: { marginBottom: '20px' } });
+    [
+      { l: 'Customers', v: stats.customers, c: '#f97316' },
+      { l: 'Designers', v: stats.designers, c: '#06b6d4' },
+      { l: 'Online Now', v: stats.onlineDesigners, c: '#22c55e' },
+      { l: 'Total Gigs', v: stats.totalGigs, c: '#a1a1aa' },
+    ].forEach(s => sg2.append(h('div', { class: 'card stat' }, h('div', { class: 'stat-val', style: { color: s.c } }, String(s.v)), h('div', { class: 'stat-lbl' }, s.l))));
+    content.append(sg2);
+
+    const sg3 = h('div', { class: 'grid g3', style: { marginBottom: '20px' } });
+    [
+      { l: 'Active Gigs', v: stats.activeGigs, c: '#f97316' },
+      { l: 'Pending (Unmatched)', v: stats.pendingGigs, c: '#eab308' },
+      { l: 'Completed', v: stats.completedGigs, c: '#22c55e' },
+    ].forEach(s => sg3.append(h('div', { class: 'card stat' }, h('div', { class: 'stat-val', style: { color: s.c } }, String(s.v)), h('div', { class: 'stat-lbl' }, s.l))));
+    content.append(sg3);
+
+    content.append(h('div', { class: 'card', style: { marginBottom: '20px' } },
+      h('h3', null, 'New This Week'),
+      h('div', { style: { display: 'flex', gap: '24px' } },
+        h('div', null, h('span', { style: { color: '#f97316', fontWeight: 800, fontSize: '20px', fontFamily: 'Outfit' } }, String(stats.newCustomers)), h('span', { style: { color: '#71717a', fontSize: '12px', marginLeft: '6px' } }, 'new customers')),
+        h('div', null, h('span', { style: { color: '#06b6d4', fontWeight: 800, fontSize: '20px', fontFamily: 'Outfit' } }, String(stats.newDesigners)), h('span', { style: { color: '#71717a', fontSize: '12px', marginLeft: '6px' } }, 'new designers'))
+      )
+    ));
+  }
+
+  // CUSTOMERS
+  if (section === 'customers') {
+    content.append(h('h2', null, `Customers (${customers.length})`));
+    const tbl = h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Company'), h('th', null, 'Joined'), h('th', null, 'Actions'))),
+      h('tbody', null, ...customers.map(c =>
+        h('tr', null,
+          h('td', { style: { color: '#fff', fontWeight: 600 } }, c.name || '-'),
+          h('td', null, c.email),
+          h('td', null, c.company_name || '-'),
+          h('td', null, new Date(c.created_at).toLocaleDateString('en-ZA')),
+          h('td', null, h('button', { class: 'btn btn-red', onClick: () => deleteCustomer(c.id) }, 'Delete'))
+        )
+      ))
+    );
+    content.append(h('div', { class: 'card' }, tbl));
+  }
+
+  // DESIGNERS
+  if (section === 'designers') {
+    content.append(h('h2', null, `Designers (${designers.length})`));
+    const tbl = h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'City'), h('th', null, 'Rating'), h('th', null, 'Status'), h('th', null, 'Actions'))),
+      h('tbody', null, ...designers.map(d =>
+        h('tr', null,
+          h('td', { style: { color: '#fff', fontWeight: 600 } }, d.name || '-'),
+          h('td', null, d.email),
+          h('td', null, d.city || '-'),
+          h('td', null, (d.rating || 0) + '★ (' + (d.total_reviews || 0) + ')'),
+          h('td', null,
+            h('span', { class: 'online-dot', style: { background: d.is_online ? '#22c55e' : '#555' } }),
+            h('span', { class: 'pill', style: { background: d.is_approved ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)', color: d.is_approved ? '#22c55e' : '#ef4444', border: '1px solid ' + (d.is_approved ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)') } }, d.is_approved ? 'Approved' : 'Suspended')
+          ),
+          h('td', { style: { display: 'flex', gap: '4px' } },
+            h('button', { class: 'btn ' + (d.is_approved ? 'btn-red' : 'btn-green'), onClick: () => toggleApproval(d.id, !d.is_approved) }, d.is_approved ? 'Suspend' : 'Approve'),
+            h('button', { class: 'btn btn-red', onClick: () => deleteDesigner(d.id) }, 'Delete')
+          )
+        )
+      ))
+    );
+    content.append(h('div', { class: 'card' }, tbl));
+  }
+
+  // GIGS
+  if (section === 'gigs') {
+    content.append(h('h2', null, `Recent Gigs (${gigs.length})`));
+    const statusColors = { pending: '#eab308', in_progress: '#f97316', delivered: '#22c55e', completed: '#22c55e', cancelled: '#ef4444' };
+    const tbl = h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'Service'), h('th', null, 'Price'), h('th', null, 'Status'), h('th', null, 'Turnaround'), h('th', null, 'Created'))),
+      h('tbody', null, ...gigs.map(g =>
+        h('tr', null,
+          h('td', { style: { color: '#fff', fontWeight: 600 } }, g.service || '-'),
+          h('td', null, 'R' + (g.price || 0).toLocaleString()),
+          h('td', null, h('span', { class: 'pill', style: { background: (statusColors[g.status] || '#555') + '18', color: statusColors[g.status] || '#555', border: '1px solid ' + (statusColors[g.status] || '#555') + '30' } }, g.status?.replace('_', ' '))),
+          h('td', null, g.turnaround + 'h'),
+          h('td', null, new Date(g.created_at).toLocaleDateString('en-ZA'))
+        )
+      ))
+    );
+    content.append(h('div', { class: 'card' }, tbl));
+  }
+
+  // PAYOUTS
+  if (section === 'payouts') {
+    content.append(h('h2', null, 'Payout Queue'));
+    if (payoutData.length === 0) {
+      content.append(h('div', { class: 'card', style: { textAlign: 'center', padding: '40px' } }, h('div', { style: { color: '#71717a' } }, 'No payouts due')));
+    } else {
+      payoutData.forEach(d => {
+        const card = h('div', { class: 'card', style: { marginBottom: '12px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } },
+            h('div', null,
+              h('div', { style: { color: '#fff', fontWeight: 700, fontFamily: 'Outfit', fontSize: '15px' } }, d.name),
+              h('div', { style: { color: '#71717a', fontSize: '12px' } }, d.email + (d.bank_name ? ' · ' + d.bank_name + ' ' + (d.bank_account || '') : ' · No bank details'))
+            ),
+            h('div', { style: { textAlign: 'right' } },
+              h('div', { style: { fontFamily: 'Outfit', fontWeight: 800, fontSize: '20px', color: d.owing > 0 ? '#f97316' : '#22c55e' } }, 'R' + d.owing.toLocaleString()),
+              h('div', { style: { color: '#71717a', fontSize: '11px' } }, 'owing of R' + d.earnings.toLocaleString() + ' earned')
+            )
+          ),
+          h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
+            d.owing > 0 ? h('button', { class: 'btn btn-orange', onClick: () => createPayout(d) }, 'Create Payout — R' + d.owing.toLocaleString()) : null,
+            h('span', { style: { color: '#71717a', fontSize: '11px', marginLeft: '8px' } }, d.gigCount + ' gigs · R' + d.totalPaid.toLocaleString() + ' paid so far')
+          )
+        );
+
+        if (d.payouts && d.payouts.length > 0) {
+          const ptbl = h('table', { style: { marginTop: '10px' } },
+            h('thead', null, h('tr', null, h('th', null, 'Amount'), h('th', null, 'Status'), h('th', null, 'Date'), h('th', null, 'Action'))),
+            h('tbody', null, ...d.payouts.map(p =>
+              h('tr', null,
+                h('td', { style: { color: '#06b6d4', fontWeight: 700 } }, 'R' + Number(p.amount).toLocaleString()),
+                h('td', null, h('span', { class: 'pill', style: { background: p.status === 'paid' ? 'rgba(34,197,94,.15)' : 'rgba(249,115,22,.15)', color: p.status === 'paid' ? '#22c55e' : '#f97316', border: '1px solid ' + (p.status === 'paid' ? 'rgba(34,197,94,.2)' : 'rgba(249,115,22,.2)') } }, p.status)),
+                h('td', null, new Date(p.created_at).toLocaleDateString('en-ZA')),
+                h('td', null, p.status !== 'paid' ? h('button', { class: 'btn btn-green', onClick: () => markPaid(p.id) }, 'Mark Paid') : h('span', { style: { color: '#22c55e', fontSize: '11px' } }, '✓ ' + (p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-ZA') : '')))
+              )
+            ))
+          );
+          card.append(ptbl);
+        }
+        content.append(card);
+      });
+    }
+  }
+
+  // ONLINE
+  if (section === 'online') {
+    const online = designers.filter(d => d.is_online);
+    content.append(h('h2', null, `Online Designers (${online.length})`));
+    if (online.length === 0) {
+      content.append(h('div', { class: 'card', style: { textAlign: 'center', padding: '40px' } }, h('div', { style: { color: '#71717a' } }, 'No designers online right now')));
+    } else {
+      const grid = h('div', { class: 'grid g3' });
+      online.forEach(d => {
+        grid.append(h('div', { class: 'card' },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' } },
+            h('div', { style: { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #06b6d4, #22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit', fontWeight: 700, fontSize: '14px', color: '#09090b' } }, d.avatar_initials || '?'),
+            h('div', null,
+              h('div', { style: { color: '#fff', fontWeight: 600, fontSize: '14px' } }, d.name),
+              h('div', { style: { color: '#71717a', fontSize: '11px' } }, d.city || '-')
+            )
+          ),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' } },
+            h('span', { style: { color: '#f97316', fontSize: '12px' } }, '★'.repeat(Math.round(d.rating || 0))),
+            h('span', { style: { color: '#71717a', fontSize: '11px' } }, (d.rating || 0) + ' · ' + (d.completed_gigs || 0) + ' gigs')
+          ),
+          h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap' } }, ...(d.skills || []).slice(0, 3).map(s =>
+            h('span', { style: { fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(6,182,212,.1)', color: '#06b6d4', border: '1px solid rgba(6,182,212,.2)' } }, s)
+          ))
+        ));
+      });
+      content.append(grid);
+    }
+  }
+
+  const main = h('div', { class: 'main' },
+    h('div', { class: 'top' },
+      h('div', { style: { fontFamily: 'Outfit', fontWeight: 700, fontSize: '14px', color: '#fff' } }, '⚙️ Admin Panel'),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+        h('button', { class: 'btn btn-gray', onClick: async () => { await Promise.all([loadStats(), loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]); render(); showToast('Refreshed'); } }, '↻ Refresh'),
+        h('span', { style: { color: '#71717a', fontSize: '12px' } }, adminEmail)
+      )
+    ),
+    content
+  );
+
+  app.append(h('div', { class: 'wrap' }, sidebar, main));
+}
+
+// Init
+if (adminEmail) {
+  (async () => {
+    await loadStats();
+    if (stats) { await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]); }
+    render();
+  })();
+} else { render(); }
+</script>
+</body>
+</html>
