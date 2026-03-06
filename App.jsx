@@ -951,26 +951,138 @@ const CommentThread = ({ gigId, userId, userRole, userName }) => {
 };
 
 // ─── PROJECT VIEW ───────────────────────────────────────────────────────────
-const ProjectView = ({ gig, designer, rating, isCust, userId, userName, onBack, onRate, onDeliver, onAccept }) => {
+const ProjectView = ({ gig, designer, rating, isCust, userId, userName, onBack, onRate, onDeliver, onAccept, onRefresh }) => {
+  const [timeline, setTimeline] = useState([]);
+  const [revFeedback, setRevFeedback] = useState("");
+  const [showRevision, setShowRevision] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   const pct = gig.status === "in_progress" && gig.deadline ? Math.min(100, Math.max(0, Math.round(((Date.now() - new Date(gig.created_at).getTime()) / (new Date(gig.deadline).getTime() - new Date(gig.created_at).getTime())) * 100))) : 0;
   const hrs = gig.deadline ? Math.max(0, ((new Date(gig.deadline).getTime() - Date.now()) / 3600000).toFixed(1)) : 0;
   const sc = { pending: X.yellow, in_progress: isCust ? X.orange : X.teal, delivered: X.green, completed: X.green }[gig.status] || X.gray;
 
+  const maxRev = gig.turnaround === 4 ? 1 : gig.turnaround === 12 ? 2 : 3;
+  const revsUsed = gig.revisions_used || 0;
+  const revsLeft = Math.max(0, maxRev - revsUsed);
+  const currentRound = gig.current_round || 1;
+
+  useEffect(() => {
+    (async () => {
+      const r = await api("get_timeline", { gig_id: gig.id }, "GET");
+      if (r.events) setTimeline(r.events);
+    })();
+  }, [gig.id, gig.status]);
+
+  const acceptDelivery = async () => {
+    setSubmitting(true);
+    await api("accept_delivery", { gig_id: gig.id, customer_name: userName });
+    if (onRefresh) onRefresh();
+    setSubmitting(false);
+  };
+
+  const requestRevision = async () => {
+    if (!revFeedback.trim()) return;
+    setSubmitting(true);
+    const r = await api("request_revision", { gig_id: gig.id, customer_name: userName, feedback: revFeedback });
+    if (r.error) { alert(r.error); } else { setShowRevision(false); setRevFeedback(""); }
+    if (onRefresh) onRefresh();
+    setSubmitting(false);
+  };
+
+  const eventIcons = { created: "📝", paid: "💳", designer_assigned: "🎨", in_progress: "⏱", delivered: "📦", revision_requested: "🔄", revision_submitted: "📦", accepted: "✅", rated: "⭐", completed: "🎉" };
+  const eventColors = { created: X.gray, paid: X.green, designer_assigned: X.teal, in_progress: X.orange, delivered: X.green, revision_requested: X.yellow, revision_submitted: X.teal, accepted: X.green, rated: X.orange, completed: X.green };
+
   return (
     <div>
       <button onClick={onBack} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back to Projects</button>
+
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <div style={{ display: "flex", gap: 5, marginBottom: 6, flexWrap: "wrap" }}><Pill color={sc}>{gig.status.replace("_", " ")}</Pill><Pill color={gig.turnaround === 4 ? X.red : gig.turnaround === 12 ? X.yellow : X.green}>{TIERS[gig.turnaround]?.tag}</Pill><Pill color={X.green}>PAID</Pill></div>
+          <div style={{ display: "flex", gap: 5, marginBottom: 6, flexWrap: "wrap" }}>
+            <Pill color={sc}>{gig.status.replace("_", " ")}</Pill>
+            <Pill color={gig.turnaround === 4 ? X.red : gig.turnaround === 12 ? X.yellow : X.green}>{TIERS[gig.turnaround]?.tag}</Pill>
+            <Pill color={X.green}>PAID</Pill>
+            <Pill color={X.gray}>Round {currentRound}</Pill>
+          </div>
           <H s={22}>{gig.service}</H>
         </div>
         <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 24, color: isCust ? X.orange : X.teal }}>R{gig.price?.toLocaleString()}</div>
       </div>
+
+      {/* Revision counter */}
+      <Card style={{ marginBottom: 16, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <T sm style={{ color: X.gray, fontWeight: 600 }}>REVISIONS</T>
+          <T sm style={{ color: X.white, marginTop: 2 }}>{revsUsed} of {maxRev} used · <span style={{ color: revsLeft > 0 ? X.green : X.red }}>{revsLeft} remaining</span></T>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {Array.from({ length: maxRev }).map((_, i) => (
+            <div key={i} style={{ width: 24, height: 24, borderRadius: 6, background: i < revsUsed ? X.orange : X.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: i < revsUsed ? "#fff" : X.gray, fontWeight: 700, fontFamily: "Outfit" }}>{i < revsUsed ? "✓" : i + 1}</div>
+          ))}
+        </div>
+      </Card>
+
       {gig.brief && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 4 }}>BRIEF</T><T style={{ color: X.white }}>{gig.brief}</T></Card>}
-      {gig.status === "in_progress" && <Card style={{ marginBottom: 16, padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><T sm style={{ color: X.gray, fontWeight: 600 }}>PROGRESS</T><T sm style={{ color: hrs < 1 ? X.red : X.grayLight }}>{hrs}h remaining</T></div><Bar pct={pct} /><T dim sm style={{ marginTop: 6 }}>Deadline: {new Date(gig.deadline).toLocaleString("en-ZA")}</T></Card>}
-      {designer && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 8 }}>DESIGNER</T><div style={{ display: "flex", alignItems: "center", gap: 12 }}><div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${X.teal}, ${X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.bg }}>{designer.avatar_initials || "?"}</div><div style={{ flex: 1 }}><T style={{ color: X.white, fontWeight: 600 }}>{designer.name}</T><div style={{ display: "flex", alignItems: "center", gap: 4 }}><Stars n={designer.rating} s={12} /><T sm dim>{designer.rating || "New"}</T></div></div>{isCust && gig.status === "delivered" && !rating && <Btn sm onClick={() => onRate(gig.id)}>Accept & Rate</Btn>}{!isCust && gig.status === "in_progress" && <Btn sm onClick={() => onDeliver(gig.id)} style={{ background: X.teal, color: X.bg }}>Mark Delivered</Btn>}</div></Card>}
-      {!isCust && gig.status === "pending" && <Card style={{ marginBottom: 16, padding: 16, textAlign: "center" }}><Btn onClick={() => onAccept(gig.id, gig.turnaround)} style={{ background: X.teal, color: X.bg }}>Accept This Gig</Btn></Card>}
+
+      {gig.status === "in_progress" && <Card style={{ marginBottom: 16, padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><T sm style={{ color: X.gray, fontWeight: 600 }}>PROGRESS — Round {currentRound}</T><T sm style={{ color: hrs < 1 ? X.red : X.grayLight }}>{hrs}h remaining</T></div><Bar pct={pct} /><T dim sm style={{ marginTop: 6 }}>Deadline: {new Date(gig.deadline).toLocaleString("en-ZA")}</T></Card>}
+
+      {/* Accept / Request Revision buttons for customer when delivered */}
+      {isCust && gig.status === "delivered" && (
+        <Card style={{ marginBottom: 16, padding: 16, borderTop: `2px solid ${X.green}` }}>
+          <T sm style={{ color: X.green, fontWeight: 600, marginBottom: 8 }}>DESIGNS DELIVERED — Round {currentRound}</T>
+          <T dim sm style={{ marginBottom: 14 }}>Review the uploaded files below. You can accept or request changes{revsLeft > 0 ? ` (${revsLeft} revision${revsLeft > 1 ? "s" : ""} remaining)` : ""}.</T>
+
+          {showRevision ? (
+            <div>
+              <Field label={`What needs to change? (Revision ${revsUsed + 1} of ${maxRev})`} value={revFeedback} onChange={setRevFeedback} textarea placeholder="Be specific — e.g. make the logo bigger, change the blue to navy, add the phone number..." />
+              <div style={{ display: "flex", gap: 6 }}>
+                <Btn v="ghost" sm onClick={() => setShowRevision(false)}>Cancel</Btn>
+                <Btn sm onClick={requestRevision} disabled={submitting || !revFeedback.trim()} style={{ background: X.yellow, color: "#000" }}>{submitting ? "Sending..." : "Submit Revision Request"}</Btn>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Btn sm onClick={acceptDelivery} disabled={submitting} style={{ background: X.green, color: "#fff" }}>{submitting ? "..." : "✓ Accept & Complete"}</Btn>
+              {revsLeft > 0 && <Btn sm onClick={() => setShowRevision(true)} style={{ background: X.yellow + "20", color: X.yellow, border: `1px solid ${X.yellow}30` }}>🔄 Request Changes ({revsLeft} left)</Btn>}
+              {!rating && <Btn sm onClick={() => onRate(gig.id)}>⭐ Accept & Rate</Btn>}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Designer info */}
+      {designer && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 8 }}>DESIGNER</T><div style={{ display: "flex", alignItems: "center", gap: 12 }}><div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${X.teal}, ${X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.bg }}>{designer.avatar_initials || "?"}</div><div style={{ flex: 1 }}><T style={{ color: X.white, fontWeight: 600 }}>{designer.name}</T><div style={{ display: "flex", alignItems: "center", gap: 4 }}><Stars n={designer.rating} s={12} /><T sm dim>{designer.rating || "New"}</T></div></div>{!isCust && gig.status === "in_progress" && <Btn sm onClick={() => onDeliver(gig.id)} style={{ background: X.teal, color: "#fff" }}>📦 Mark Delivered</Btn>}</div></Card>}
+
+      {!isCust && gig.status === "pending" && <Card style={{ marginBottom: 16, padding: 16, textAlign: "center" }}><Btn onClick={() => onAccept(gig.id, gig.turnaround)} style={{ background: X.teal, color: "#fff" }}>Accept This Gig</Btn></Card>}
+
       {rating && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 6 }}>RATING</T><div style={{ display: "flex", alignItems: "center", gap: 6 }}><Stars n={rating.score} s={16} /><T style={{ color: X.white }}>{rating.score}/5</T></div>{rating.feedback && <T dim style={{ marginTop: 4 }}>{rating.feedback}</T>}</Card>}
+
+      {/* Project Timeline */}
+      {timeline.length > 0 && (
+        <Card style={{ marginBottom: 16, padding: 16 }}>
+          <T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 12 }}>PROJECT TIMELINE</T>
+          <div style={{ position: "relative", paddingLeft: 28 }}>
+            {/* Vertical line */}
+            <div style={{ position: "absolute", left: 10, top: 4, bottom: 4, width: 2, background: X.border, borderRadius: 1 }} />
+            {timeline.map((ev, i) => (
+              <div key={ev.id} style={{ position: "relative", marginBottom: i < timeline.length - 1 ? 16 : 0 }}>
+                <div style={{ position: "absolute", left: -22, top: 2, width: 20, height: 20, borderRadius: "50%", background: X.card, border: `2px solid ${eventColors[ev.event_type] || X.gray}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>{eventIcons[ev.event_type] || "●"}</div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <T sm style={{ color: X.white, fontWeight: 600 }}>{ev.event_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</T>
+                    {ev.round_number && <Pill color={X.gray}>Round {ev.round_number}</Pill>}
+                  </div>
+                  {ev.message && <T sm dim style={{ marginTop: 2 }}>{ev.message}</T>}
+                  <T sm dim style={{ marginTop: 2, fontSize: 11 }}>{ev.actor_name ? ev.actor_name + " · " : ""}{new Date(ev.created_at).toLocaleString("en-ZA", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</T>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Files & Messages */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
         {gig.status !== "pending" && <Card style={{ padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 10 }}>FILES</T><GigFiles gigId={gig.id} role={isCust ? "customer" : "designer"} userId={userId} /></Card>}
         {gig.status !== "pending" && <Card style={{ padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 10 }}>MESSAGES</T><CommentThread gigId={gig.id} userId={userId} userRole={isCust ? "customer" : "designer"} userName={userName} /></Card>}
