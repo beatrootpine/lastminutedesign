@@ -730,8 +730,64 @@ const CreateGig = ({ onSubmit, onBack }) => {
   );
 };
 
+// ─── CUSTOMER PROFILE ───────────────────────────────────────────────────────
+const CustProfile = ({ customer, onUpdate }) => {
+  const [f, setF] = useState({ ...customer });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const res = await api("update_customer_profile", { customer_id: customer.id, ...f });
+    if (res.customer) { onUpdate(res.customer); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <H s={20} style={{ marginBottom: 16 }}>Business Details</H>
+      <T dim sm style={{ marginBottom: 20 }}>These details will be used on your design elements (letterheads, business cards, etc.)</T>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+        <Card style={{ padding: 16 }}>
+          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Personal</T>
+          <Field label="Full Name" value={f.name || ""} onChange={v => set("name", v)} placeholder="Your name" />
+          <Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" />
+        </Card>
+        <Card style={{ padding: 16 }}>
+          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Company</T>
+          <Field label="Company Name" value={f.company_name || ""} onChange={v => set("company_name", v)} placeholder="Your Company (Pty) Ltd" />
+          <Field label="Registration Number" value={f.registration_number || ""} onChange={v => set("registration_number", v)} placeholder="2024/000000/07" />
+          <Field label="Tagline / Slogan" value={f.tagline || ""} onChange={v => set("tagline", v)} placeholder="We make things happen" />
+        </Card>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 12 }}>
+        <Card style={{ padding: 16 }}>
+          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Contact Details</T>
+          <Field label="Company Email" value={f.company_email || ""} onChange={v => set("company_email", v)} placeholder="info@company.co.za" />
+          <Field label="Company Phone" value={f.company_phone || ""} onChange={v => set("company_phone", v)} placeholder="+27 11 000 0000" />
+          <Field label="Website" value={f.company_website || ""} onChange={v => set("company_website", v)} placeholder="www.company.co.za" />
+          <Field label="Physical Address" value={f.company_address || ""} onChange={v => set("company_address", v)} textarea placeholder="123 Main Road, Sandton, 2196" />
+        </Card>
+        <Card style={{ padding: 16 }}>
+          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Brand & Social</T>
+          <Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="e.g. Navy #1B2A4A, Gold #D4AF37" />
+          <Field label="Facebook" value={f.social_facebook || ""} onChange={v => set("social_facebook", v)} placeholder="facebook.com/yourpage" />
+          <Field label="Instagram" value={f.social_instagram || ""} onChange={v => set("social_instagram", v)} placeholder="@yourhandle" />
+          <Field label="Twitter / X" value={f.social_twitter || ""} onChange={v => set("social_twitter", v)} placeholder="@yourhandle" />
+          <Field label="LinkedIn" value={f.social_linkedin || ""} onChange={v => set("social_linkedin", v)} placeholder="linkedin.com/company/yours" />
+        </Card>
+      </div>
+      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <Btn onClick={save} disabled={saving}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Details"}</Btn>
+        <T sm dim>Your details auto-populate into design briefs</T>
+      </div>
+    </div>
+  );
+};
+
 // ─── CUSTOMER DASHBOARD ─────────────────────────────────────────────────────
-const CustDash = ({ customer, onCreateGig, onRate }) => {
+const CustDash = ({ customer, onCreateGig, onRate, onUpdateCustomer }) => {
   const [tab, setTab] = useState("active");
   const [gigs, setGigs] = useState([]);
   const [designers, setDesigners] = useState([]);
@@ -748,32 +804,189 @@ const CustDash = ({ customer, onCreateGig, onRate }) => {
 
   const active = gigs.filter(g => g.status !== "completed");
   const done = gigs.filter(g => g.status === "completed");
-  const list = tab === "active" ? active : done;
+  const totalSpent = gigs.reduce((s, g) => s + (g.price || 0), 0);
 
   if (loading) return <Spinner text="Loading gigs..." />;
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-        <div><H s={22}>My Gigs</H><T dim style={{ marginTop: 2 }}>Welcome back, {customer.name}</T></div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div><H s={22}>Dashboard</H><T dim style={{ marginTop: 2 }}>Welcome back, {customer.name}</T></div>
         <Btn onClick={onCreateGig}>+ New Gig</Btn>
       </div>
-      <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
-        {["active", "completed"].map(t => <button key={t} onClick={() => setTab(t)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", textTransform: "capitalize", background: tab === t ? X.orangeDim : "transparent", color: tab === t ? X.orange : X.gray }}>{t} ({t === "active" ? active.length : done.length})</button>)}
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>
+        {[
+          { l: "Active", v: active.length, c: X.orange },
+          { l: "Completed", v: done.length, c: X.green },
+          { l: "Total Spent", v: `R${totalSpent.toLocaleString()}`, c: X.orangeLight },
+        ].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
       </div>
-      {list.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: 36 }}><T dim>{tab === "active" ? "No active gigs" : "No completed gigs"}</T>{tab === "active" && <Btn sm onClick={onCreateGig} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {list.map(g => <GigCard key={g.id} gig={g} designer={designers.find(d => d.id === g.designer_id)} rating={ratings.find(r => r.gig_id === g.id)} isCust onRate={onRate} userId={customer.id} />)}
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
+        {[
+          { k: "active", l: `Active (${active.length})` },
+          { k: "completed", l: `Completed (${done.length})` },
+          { k: "profile", l: "Business Profile" },
+        ].map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.orangeDim : "transparent", color: tab === t.k ? X.orange : X.gray }}>{t.l}</button>)}
+      </div>
+
+      {tab === "profile" && <CustProfile customer={customer} onUpdate={onUpdateCustomer} />}
+
+      {(tab === "active" || tab === "completed") && (
+        (tab === "active" ? active : done).length === 0 ? (
+          <Card style={{ textAlign: "center", padding: 36 }}><T dim>{tab === "active" ? "No active gigs" : "No completed gigs"}</T>{tab === "active" && <Btn sm onClick={onCreateGig} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(tab === "active" ? active : done).map(g => <GigCard key={g.id} gig={g} designer={designers.find(d => d.id === g.designer_id)} rating={ratings.find(r => r.gig_id === g.id)} isCust onRate={onRate} userId={customer.id} />)}
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
+// ─── DESIGNER PROFILE ───────────────────────────────────────────────────────
+const DesProfile = ({ designer, onUpdate }) => {
+  const [f, setF] = useState({ ...designer });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const res = await api("update_designer_profile", { designer_id: designer.id, ...f });
+    if (res.designer) { onUpdate(res.designer); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    setSaving(false);
+  };
+
+  const completeness = [f.phone, f.id_number, f.address, f.bank_name, f.bank_account].filter(Boolean).length;
+  const pct = Math.round((completeness / 5) * 100);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <H s={20}>My Profile</H>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 80, height: 6, background: X.bg, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? X.green : X.teal, borderRadius: 3 }} />
+          </div>
+          <T sm style={{ color: pct === 100 ? X.green : X.teal }}>{pct}%</T>
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}>
+          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Personal Details</T>
+          <Field label="Full Name" value={f.name || ""} onChange={v => set("name", v)} placeholder="Your name" />
+          <Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" />
+          <Field label="ID Number" value={f.id_number || ""} onChange={v => set("id_number", v)} placeholder="Your SA ID number" />
+          <Field label="City" value={f.city || ""} onChange={v => set("city", v)} placeholder="Johannesburg" />
+          <Field label="Address" value={f.address || ""} onChange={v => set("address", v)} textarea placeholder="Full residential address" />
+        </Card>
+        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}>
+          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Banking Details</T>
+          <T dim sm style={{ marginBottom: 12 }}>Required for weekly payouts</T>
+          <Field label="Bank Name" value={f.bank_name || ""} onChange={v => set("bank_name", v)} placeholder="e.g. FNB, Capitec, Standard Bank" />
+          <Field label="Account Number" value={f.bank_account || ""} onChange={v => set("bank_account", v)} placeholder="Your account number" />
+          <Field label="Branch Code" value={f.bank_branch || ""} onChange={v => set("bank_branch", v)} placeholder="e.g. 250655" />
+        </Card>
+      </div>
+
+      <Card style={{ padding: 16, marginTop: 12, borderTop: `2px solid ${X.teal}` }}>
+        <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Document Uploads</T>
+        <T dim sm style={{ marginBottom: 12 }}>Upload the following for account verification. These are kept private and secure.</T>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          {[
+            { key: "id_document_path", label: "ID Document", icon: "🪪", desc: "SA ID or Passport copy" },
+            { key: "address_proof_path", label: "Proof of Address", icon: "📬", desc: "Utility bill or bank statement" },
+            { key: "bank_proof_path", label: "Banking Confirmation", icon: "🏦", desc: "Bank confirmation letter" },
+          ].map(doc => (
+            <div key={doc.key} style={{ padding: 14, background: X.bg, borderRadius: 8, border: `1px solid ${f[doc.key] ? X.green + "40" : X.border}`, textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{doc.icon}</div>
+              <T sm style={{ color: X.white, fontWeight: 600 }}>{doc.label}</T>
+              <T sm dim style={{ marginBottom: 8 }}>{doc.desc}</T>
+              {f[doc.key] ? (
+                <Pill color={X.green}>Uploaded ✓</Pill>
+              ) : (
+                <label style={{ cursor: "pointer", display: "inline-block", padding: "5px 12px", borderRadius: 6, background: X.tealDim, color: X.teal, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${X.tealBorder}` }}>
+                  Upload
+                  <input type="file" onChange={(e) => { if (e.target.files[0]) set(doc.key, `uploaded_${Date.now()}`); }} style={{ display: "none" }} />
+                </label>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card style={{ padding: 16, marginTop: 12 }}>
+        <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Bio & Skills</T>
+        <Field label="Bio" value={f.bio || ""} onChange={v => set("bio", v)} textarea placeholder="What makes your work stand out..." />
+      </Card>
+
+      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <Btn onClick={save} disabled={saving} style={{ background: X.teal, color: X.bg }}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Profile"}</Btn>
+        {pct < 100 && <T sm style={{ color: X.yellow }}>Complete your profile to receive payouts</T>}
+      </div>
+    </div>
+  );
+};
+
+// ─── DESIGNER EARNINGS ──────────────────────────────────────────────────────
+const DesEarnings = ({ designer }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const res = await api("get_designer_earnings", { designer_id: designer.id }, "GET");
+      if (!res.error) setData(res);
+      setLoading(false);
+    })();
+  }, [designer.id]);
+
+  if (loading) return <Spinner text="Loading earnings..." />;
+  if (!data) return <Card style={{ padding: 24, textAlign: "center" }}><T dim>Could not load earnings</T></Card>;
+
+  return (
+    <div>
+      <H s={20} style={{ marginBottom: 16 }}>Earnings</H>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 20 }}>
+        {[
+          { l: "This Week", v: `R${data.thisWeek.toLocaleString()}`, c: X.teal },
+          { l: "This Month", v: `R${data.thisMonth.toLocaleString()}`, c: X.tealLight },
+          { l: "All Time", v: `R${data.total.toLocaleString()}`, c: X.green },
+          { l: "Gigs Done", v: data.gigCount, c: X.grayLight },
+        ].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 14 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
+      </div>
+
+      {data.gigs && data.gigs.length > 0 && (
+        <Card style={{ padding: 16 }}>
+          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Recent Earnings</T>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {data.gigs.slice(0, 10).map(g => (
+              <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${X.border}` }}>
+                <div>
+                  <T sm style={{ color: X.white }}>{g.service}</T>
+                  <T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <T sm style={{ color: X.teal, fontWeight: 700 }}>R{Math.round((g.price || 0) * 0.75).toLocaleString()}</T>
+                  <T sm dim>of R{g.price?.toLocaleString()}</T>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );
 };
 
 // ─── DESIGNER DASHBOARD ─────────────────────────────────────────────────────
-const DesDash = ({ designer, onAccept, onDeliver }) => {
+const DesDash = ({ designer, onAccept, onDeliver, onUpdateDesigner }) => {
   const [tab, setTab] = useState("available");
   const [avail, setAvail] = useState([]);
   const [myGigs, setMyGigs] = useState([]);
@@ -797,7 +1010,7 @@ const DesDash = ({ designer, onAccept, onDeliver }) => {
   const done = myGigs.filter(g => g.status === "completed" || g.status === "delivered");
   const earned = done.reduce((s, g) => s + (g.price || 0) * 0.75, 0);
 
-  const tabs = [{ k: "available", l: `Available (${avail.length})` }, { k: "active", l: `Active (${active.length})` }, { k: "done", l: `Done (${done.length})` }];
+  const tabs = [{ k: "available", l: `Available (${avail.length})` }, { k: "active", l: `Active (${active.length})` }, { k: "done", l: `Done (${done.length})` }, { k: "earnings", l: "Earnings" }, { k: "profile", l: "Profile" }];
   const list = tab === "available" ? avail : tab === "active" ? active : done;
 
   if (loading) return <Spinner text="Loading dashboard..." />;
@@ -814,13 +1027,19 @@ const DesDash = ({ designer, onAccept, onDeliver }) => {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
         {[{ l: "Completed", v: designer.completed_gigs || 0 }, { l: "Rating", v: (designer.rating || 0) + "★" }, { l: "Earned", v: `R${Math.round(earned).toLocaleString()}` }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.teal }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
       </div>
-      <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
         {tabs.map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.tealDim : "transparent", color: tab === t.k ? X.teal : X.gray }}>{t.l}</button>)}
       </div>
-      {list.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>Nothing here yet</T></Card> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {list.map(g => <GigCard key={g.id} gig={g} onAccept={onAccept} onDeliver={onDeliver} userId={designer.id} />)}
-        </div>
+
+      {tab === "earnings" && <DesEarnings designer={designer} />}
+      {tab === "profile" && <DesProfile designer={designer} onUpdate={onUpdateDesigner} />}
+
+      {(tab === "available" || tab === "active" || tab === "done") && (
+        list.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>Nothing here yet</T></Card> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {list.map(g => <GigCard key={g.id} gig={g} onAccept={onAccept} onDeliver={onDeliver} userId={designer.id} />)}
+          </div>
+        )
       )}
     </div>
   );
@@ -1135,9 +1354,9 @@ export default function App() {
       {pg === "designer-register" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="designer" />}
       {pg === "designer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="designer" />}
 
-      {pg === "customer-dash" && customer && <AppShell role="customer"><CustDash customer={customer} onCreateGig={() => setPg("create-gig")} onRate={(id) => setRateGig({ id, designer_id: null, service: "" })} /></AppShell>}
+      {pg === "customer-dash" && customer && <AppShell role="customer"><CustDash customer={customer} onCreateGig={() => setPg("create-gig")} onRate={(id) => setRateGig({ id, designer_id: null, service: "" })} onUpdateCustomer={(c) => { setCustomer(c); localStorage.setItem("lmd_session", JSON.stringify({ role: "customer", profile: c })); }} /></AppShell>}
       {pg === "create-gig" && customer && <AppShell role="customer"><CreateGig onSubmit={createGig} onBack={() => setPg("customer-dash")} /></AppShell>}
-      {pg === "designer-dash" && designer && <AppShell role="designer"><DesDash designer={designer} onAccept={acceptGig} onDeliver={deliverGig} /></AppShell>}
+      {pg === "designer-dash" && designer && <AppShell role="designer"><DesDash designer={designer} onAccept={acceptGig} onDeliver={deliverGig} onUpdateDesigner={(d) => { setDesigner(d); localStorage.setItem("lmd_session", JSON.stringify({ role: "designer", profile: d })); }} /></AppShell>}
     </div>
   );
 }
