@@ -1,157 +1,142 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Vercel Serverless Function — /api/db
+// All database operations via Supabase REST API (no imports needed)
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { action, data } = req.body;
+  const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const KEY = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!SUPA || !KEY) return res.status(500).json({ error: "Supabase not configured" });
+
+  const { action } = req.method === "GET" ? req.query : req.body;
   if (!action) return res.status(400).json({ error: "Missing action" });
+
+  // Helper: query Supabase REST API
+  async function db(path, opts = {}) {
+    const r = await fetch(`${SUPA}/rest/v1/${path}`, {
+      headers: {
+        apikey: KEY,
+        Authorization: `Bearer ${KEY}`,
+        "Content-Type": "application/json",
+        Prefer: opts.prefer || "return=representation",
+      },
+      method: opts.method || "GET",
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const txt = await r.text();
+    if (!r.ok) throw new Error(txt);
+    return txt ? JSON.parse(txt) : null;
+  }
 
   try {
     switch (action) {
 
       case "customer_login": {
-        const { email, name } = data;
-        let { data: customer } = await supabase.from("customers").select("*").eq("email", email).single();
-        if (!customer) {
-          const { data: c, error } = await supabase.from("customers").insert({ email, name }).select().single();
-          if (error) throw error;
-          customer = c;
-        }
-        return res.json({ success: true, customer });
+        const { email, name } = req.body;
+        const ex = await db(`customers?email=eq.${encodeURIComponent(email)}&limit=1`);
+        if (ex && ex.length > 0) return res.json({ customer: ex[0] });
+        const c = await db("customers", { method: "POST", body: { email, name } });
+        return res.json({ customer: c[0] });
       }
 
       case "designer_register": {
-        const { email, name, city, bio, skills } = data;
-        const initials = name.split(" ").map(w => w[0]).join("").toUpperCase();
-        const { data: designer, error } = await supabase
-          .from("designers")
-          .insert({ email, name, city, bio, skills, avatar_initials: initials, is_online: true, is_approved: true })
-          .select().single();
-        if (error) {
-          if (error.code === "23505") {
-            const { data: existing } = await supabase.from("designers").select("*").eq("email", email).single();
-            return res.json({ success: true, designer: existing });
-          }
-          throw error;
-        }
-        return res.json({ success: true, designer });
+        const { email, name, city, bio, skills } = req.body;
+        const ex = await db(`designers?email=eq.${encodeURIComponent(email)}&limit=1`);
+        if (ex && ex.length > 0) return res.json({ designer: ex[0], existing: true });
+        const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+        const d = await db("designers", { method: "POST", body: { email, name, city, bio, skills, avatar_initials: initials, is_online: true, is_approved: true } });
+        return res.json({ designer: d[0] });
       }
 
       case "designer_login": {
-        const { email } = data;
-        const { data: designer, error } = await supabase.from("designers").select("*").eq("email", email).single();
-        if (error || !designer) return res.status(404).json({ error: "Designer not found. Register first." });
-        await supabase.from("designers").update({ is_online: true }).eq("id", designer.id);
-        return res.json({ success: true, designer: { ...designer, is_online: true } });
+        const { email } = req.body;
+        const d = await db(`designers?email=eq.${encodeURIComponent(email)}&limit=1`);
+        if (!d || d.length === 0) return res.status(404).json({ error: "Designer not found. Please register first." });
+        await db(`designers?id=eq.${d[0].id}`, { method: "PATCH", body: { is_online: true } });
+        return res.json({ designer: { ...d[0], is_online: true } });
       }
 
       case "create_gig": {
-        const { customer_id, service, category, brief, turnaround, price } = data;
+        const { customer_id, service, category, brief, turnaround, price } = req.body;
         const deadline = new Date(Date.now() + turnaround * 3600000).toISOString();
-        const { data: designers } = await supabase.from("designers").select("*").eq("is_online", true).eq("is_approved", true).contains("skills", [service]);
-        let designer = designers?.length > 0 ? designers[Math.floor(Math.random() * designers.length)] : null;
-        if (!designer) {
-          const { data: any } = await supabase.from("designers").select("*").eq("is_online", true).limit(1);
-          designer = any?.[0] || null;
+        // Find available designer with matching skill
+        const designers = await db(`designers?is_online=eq.true&is_approved=eq.true&skills=cs.{${encodeURIComponent(service)}}&order=rating.desc&limit=1`);
+        let designer_id = null;
+        let status = "pending";
+        if (designers && designers.length > 0) {
+          designer_id = designers[0].id;
+          status = "in_progress";
         }
-        const { data: gig, error } = await supabase.from("gigs").insert({
-          customer_id, designer_id: designer?.id || null, service, category, brief, turnaround, price,
-          status: designer ? "in_progress" : "pending", deadline,
-        }).select().single();
-        if (error) throw error;
-        return res.json({ success: true, gig, designer });
+        const gig = await db("gigs", { method: "POST", body: { customer_id, designer_id, service, category: category || "", brief, turnaround, price, status, deadline } });
+        return res.json({ gig: gig[0], designer: designers?.[0] || null });
       }
 
       case "get_customer_gigs": {
-        const { data: gigs, error } = await supabase.from("gigs").select("*").eq("customer_id", data.customer_id).order("created_at", { ascending: false });
-        if (error) throw error;
-        return res.json({ success: true, gigs });
+        const { customer_id } = req.query;
+        const gigs = await db(`gigs?customer_id=eq.${customer_id}&order=created_at.desc`);
+        const dIds = [...new Set(gigs.filter(g => g.designer_id).map(g => g.designer_id))];
+        let designers = [];
+        if (dIds.length > 0) designers = await db(`designers?id=in.(${dIds.join(",")})`);
+        const gIds = gigs.map(g => g.id);
+        let ratings = [];
+        if (gIds.length > 0) ratings = await db(`ratings?gig_id=in.(${gIds.join(",")})`);
+        return res.json({ gigs, designers, ratings });
       }
 
       case "get_available_gigs": {
-        const { data: gigs, error } = await supabase.from("gigs").select("*").eq("status", "pending").order("created_at", { ascending: false });
-        if (error) throw error;
-        return res.json({ success: true, gigs });
+        const gigs = await db("gigs?status=eq.pending&order=created_at.desc");
+        return res.json({ gigs });
       }
 
       case "get_designer_gigs": {
-        const { data: gigs, error } = await supabase.from("gigs").select("*").eq("designer_id", data.designer_id).order("created_at", { ascending: false });
-        if (error) throw error;
-        return res.json({ success: true, gigs });
+        const { designer_id } = req.query;
+        const gigs = await db(`gigs?designer_id=eq.${designer_id}&order=created_at.desc`);
+        let ratings = [];
+        if (gigs.length > 0) ratings = await db(`ratings?gig_id=in.(${gigs.map(g => g.id).join(",")})`);
+        return res.json({ gigs, ratings });
       }
 
       case "accept_gig": {
-        const { gig_id, designer_id } = data;
-        const { data: g } = await supabase.from("gigs").select("turnaround").eq("id", gig_id).single();
-        const deadline = new Date(Date.now() + (g?.turnaround || 24) * 3600000).toISOString();
-        const { data: gig, error } = await supabase.from("gigs").update({ designer_id, status: "in_progress", deadline }).eq("id", gig_id).select().single();
-        if (error) throw error;
-        return res.json({ success: true, gig });
+        const { gig_id, designer_id, turnaround } = req.body;
+        const deadline = new Date(Date.now() + turnaround * 3600000).toISOString();
+        await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { designer_id, status: "in_progress", deadline } });
+        return res.json({ success: true });
       }
 
       case "deliver_gig": {
-        const { data: gig, error } = await supabase.from("gigs").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("id", data.gig_id).select().single();
-        if (error) throw error;
-        return res.json({ success: true, gig });
+        const { gig_id } = req.body;
+        await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "delivered", delivered_at: new Date().toISOString() } });
+        return res.json({ success: true });
       }
 
-      case "complete_gig": {
-        const { gig_id, customer_id, designer_id, score, feedback } = data;
-        await supabase.from("gigs").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", gig_id);
-        const { data: rating, error } = await supabase.from("ratings").insert({ gig_id, customer_id, designer_id, score, feedback }).select().single();
-        if (error) throw error;
-        return res.json({ success: true, rating });
-      }
-
-      case "get_designers": {
-        const { data: designers, error } = await supabase.from("designers").select("*").order("rating", { ascending: false });
-        if (error) throw error;
-        return res.json({ success: true, designers });
-      }
-
-      case "get_designer": {
-        const { data: designer, error } = await supabase.from("designers").select("*").eq("id", data.designer_id).single();
-        if (error) throw error;
-        return res.json({ success: true, designer });
+      case "rate_gig": {
+        const { gig_id, customer_id, designer_id, score, feedback } = req.body;
+        await db("ratings", { method: "POST", body: { gig_id, customer_id, designer_id, score, feedback } });
+        await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "completed", completed_at: new Date().toISOString() } });
+        return res.json({ success: true });
       }
 
       case "get_gig_files": {
-        const { data: files, error } = await supabase.from("files").select("*").eq("gig_id", data.gig_id).order("created_at", { ascending: false });
-        if (error) throw error;
-        return res.json({ success: true, files });
+        const { gig_id } = req.query;
+        const files = await db(`files?gig_id=eq.${gig_id}&order=created_at.desc`);
+        return res.json({ files });
       }
 
       case "register_file": {
-        const { gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type } = data;
-        const { data: file, error } = await supabase.from("files").insert({ gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type }).select().single();
-        if (error) throw error;
-        return res.json({ success: true, file });
-      }
-
-      case "upload_file": {
-        const { gig_id, file_name, file_base64, content_type } = data;
-        const buffer = Buffer.from(file_base64, "base64");
-        const path = `${gig_id}/${Date.now()}_${file_name}`;
-        const { error } = await supabase.storage.from("deliverables").upload(path, buffer, { contentType: content_type });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from("deliverables").getPublicUrl(path);
-        return res.json({ success: true, path, url: urlData.publicUrl });
+        const { gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type } = req.body;
+        const f = await db("files", { method: "POST", body: { gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type } });
+        return res.json({ file: f[0] });
       }
 
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
   } catch (err) {
-    console.error("DB error:", err);
-    return res.status(500).json({ error: err.message || "Server error" });
+    console.error("DB error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 }
