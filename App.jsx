@@ -581,6 +581,11 @@ const CreateGig = ({ onSubmit, onBack }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [openCats, setOpenCats] = useState([]);
+  const [briefStyle, setBriefStyle] = useState([]);
+  const [briefColor, setBriefColor] = useState("");
+  const [briefMood, setBriefMood] = useState([]);
+  const [briefAudience, setBriefAudience] = useState([]);
+  const [briefFormat, setBriefFormat] = useState([]);
 
   const toggleCat = c => setOpenCats(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
   const toggleSvc = name => setSelected(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
@@ -600,11 +605,21 @@ const CreateGig = ({ onSubmit, onBack }) => {
 
   const go = () => {
     setLoading(true);
+    // Compile structured brief
+    const parts = [];
+    if (briefStyle.length) parts.push(`Style: ${briefStyle.join(", ")}`);
+    if (briefColor) parts.push(`Colors: ${briefColor === "brand" ? "Use my brand colors" : briefColor}`);
+    if (briefMood.length) parts.push(`Mood: ${briefMood.join(", ")}`);
+    if (briefAudience.length) parts.push(`Audience: ${briefAudience.join(", ")}`);
+    if (briefFormat.length) parts.push(`Format: ${briefFormat.join(", ")}`);
+    if (brief) parts.push(`Notes: ${brief}`);
+    const compiledBrief = parts.join(" | ");
+
     onSubmit({
       service: selected.join(" + "),
       services: selected,
       category,
-      brief,
+      brief: compiledBrief,
       turnaround: parseInt(tier),
       price: total,
     });
@@ -620,6 +635,7 @@ const CreateGig = ({ onSubmit, onBack }) => {
       <div style={{ display: "flex", gap: 5, marginBottom: 24 }}>
         {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= step ? X.orange : X.border }} />)}
       </div>
+      {/* Brief summary in step 3 */}
 
       {/* Step 1: Pick services (multi-select across all categories) */}
       {step === 1 && (
@@ -698,12 +714,106 @@ const CreateGig = ({ onSubmit, onBack }) => {
         </div>
       )}
 
-      {/* Step 2: Brief */}
+      {/* Step 2: Structured Brief Builder */}
       {step === 2 && (
         <div>
-          <H s={15} style={{ marginBottom: 4 }}>Project brief</H>
-          <T dim sm style={{ marginBottom: 14 }}>Tell the designer what you need for: {serviceLabel}</T>
-          <Field label="Brief" value={brief} onChange={setBrief} textarea placeholder="Describe what you need — colors, style, dimensions, references..." />
+          <H s={15} style={{ marginBottom: 4 }}>Design Brief</H>
+          <T dim sm style={{ marginBottom: 16 }}>Help your designer understand your vision for: {serviceLabel}</T>
+
+          {/* Style */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Design Style</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {["Minimalist", "Modern", "Bold & Vibrant", "Corporate", "Playful", "Elegant / Luxury", "Vintage / Retro", "Hand-drawn", "Geometric", "Flat / Clean"].map(s => (
+                <button key={s} onClick={() => setBriefStyle(p => p.includes(s) ? p.filter(x=>x!==s) : [...p, s])} style={{
+                  padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
+                  background: briefStyle.includes(s) ? X.orangeDim : X.bg,
+                  color: briefStyle.includes(s) ? X.orange : X.gray,
+                  border: `1px solid ${briefStyle.includes(s) ? X.orangeBorder : X.border}`,
+                  cursor: "pointer",
+                }}>{s}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Scheme */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Color Preference</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {[
+                { label: "Use my brand colors", val: "brand" },
+                { label: "Dark & Moody", val: "dark" },
+                { label: "Light & Airy", val: "light" },
+                { label: "Earth Tones", val: "earth" },
+                { label: "Bright & Colorful", val: "bright" },
+                { label: "Black & White", val: "bw" },
+                { label: "Pastels", val: "pastel" },
+                { label: "Neon / Electric", val: "neon" },
+                { label: "Gold & Premium", val: "gold" },
+                { label: "Designer's Choice", val: "designer" },
+              ].map(c => (
+                <button key={c.val} onClick={() => setBriefColor(c.val)} style={{
+                  padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
+                  background: briefColor === c.val ? X.orangeDim : X.bg,
+                  color: briefColor === c.val ? X.orange : X.gray,
+                  border: `1px solid ${briefColor === c.val ? X.orangeBorder : X.border}`,
+                  cursor: "pointer",
+                }}>{c.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mood */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Mood / Feeling</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {["Professional", "Friendly", "Trustworthy", "Exciting", "Calm", "Luxurious", "Fun", "Authoritative", "Creative", "Warm"].map(m => (
+                <button key={m} onClick={() => setBriefMood(p => p.includes(m) ? p.filter(x=>x!==m) : [...p, m])} style={{
+                  padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
+                  background: briefMood.includes(m) ? X.orangeDim : X.bg,
+                  color: briefMood.includes(m) ? X.orange : X.gray,
+                  border: `1px solid ${briefMood.includes(m) ? X.orangeBorder : X.border}`,
+                  cursor: "pointer",
+                }}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Target Audience */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Target Audience</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {["General Public", "Young Adults (18-30)", "Professionals", "Corporate / B2B", "Parents / Families", "Students", "High-end / Affluent", "Local Community", "Tech-savvy", "Elderly"].map(a => (
+                <button key={a} onClick={() => setBriefAudience(p => p.includes(a) ? p.filter(x=>x!==a) : [...p, a])} style={{
+                  padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
+                  background: briefAudience.includes(a) ? X.orangeDim : X.bg,
+                  color: briefAudience.includes(a) ? X.orange : X.gray,
+                  border: `1px solid ${briefAudience.includes(a) ? X.orangeBorder : X.border}`,
+                  cursor: "pointer",
+                }}>{a}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Format / Size */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Format Needed</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {["Print Ready (PDF/CMYK)", "Digital (PNG/JPG/RGB)", "Editable Source File", "Social Media Sizes", "A4 / Letter", "A5 / Half Page", "DL / Rack Card", "Square", "Custom Size", "All Formats"].map(f => (
+                <button key={f} onClick={() => setBriefFormat(p => p.includes(f) ? p.filter(x=>x!==f) : [...p, f])} style={{
+                  padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
+                  background: briefFormat.includes(f) ? X.orangeDim : X.bg,
+                  color: briefFormat.includes(f) ? X.orange : X.gray,
+                  border: `1px solid ${briefFormat.includes(f) ? X.orangeBorder : X.border}`,
+                  cursor: "pointer",
+                }}>{f}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional notes */}
+          <Field label="Additional Notes (optional)" value={brief} onChange={setBrief} textarea placeholder="Anything else the designer should know — specific text, dimensions, references..." />
+
           <div style={{ display: "flex", gap: 6 }}>
             <Btn v="ghost" sm onClick={() => setStep(1)}>Back</Btn>
             <Btn sm onClick={() => setStep(3)}>Next →</Btn>
@@ -753,6 +863,20 @@ const CreateGig = ({ onSubmit, onBack }) => {
                 <T dim sm>Turnaround</T>
                 <T sm style={{ color: X.white }}>{tier}h — {TIERS[tier]?.tag}</T>
               </div>
+
+              {/* Brief summary */}
+              {(briefStyle.length > 0 || briefColor || briefMood.length > 0) && (
+                <div style={{ borderTop: `1px solid ${X.border}`, paddingTop: 8, marginTop: 8 }}>
+                  <T dim sm style={{ marginBottom: 4, fontWeight: 600 }}>Brief</T>
+                  {briefStyle.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><T sm dim>Style</T><T sm style={{ color: X.white }}>{briefStyle.join(", ")}</T></div>}
+                  {briefColor && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><T sm dim>Colors</T><T sm style={{ color: X.white }}>{briefColor === "brand" ? "Brand colors" : briefColor}</T></div>}
+                  {briefMood.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><T sm dim>Mood</T><T sm style={{ color: X.white }}>{briefMood.join(", ")}</T></div>}
+                  {briefAudience.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><T sm dim>Audience</T><T sm style={{ color: X.white }}>{briefAudience.join(", ")}</T></div>}
+                  {briefFormat.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><T sm dim>Format</T><T sm style={{ color: X.white }}>{briefFormat.join(", ")}</T></div>}
+                  {brief && <div style={{ marginTop: 4 }}><T sm dim>Notes</T><T sm style={{ color: X.grayLight, marginTop: 2 }}>{brief}</T></div>}
+                </div>
+              )}
+
               <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${X.border}`, paddingTop: 8, marginTop: 8 }}>
                 <T style={{ color: X.white, fontWeight: 700 }}>Total</T>
                 <span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>R{total.toLocaleString()}</span>
@@ -953,7 +1077,10 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
         <div style={{ padding: "16px 14px", borderBottom: `1px solid ${X.border}` }}><span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.white }}><span style={{ color: accent }}>lastminute</span>.design</span></div>
         <div style={{ padding: 14, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${accent}, ${isCust ? X.orangeLight : X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 12, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</T><Pill color={accent}>{role}</Pill></div></div></div>
         <div style={{ padding: "8px 6px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={accent} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
-        {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => { setShowCreate(true); setSelectedGig(null); }}>+ New Gig</Btn></div>}
+        {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => {
+          if (!profile.company_name || !profile.company_email) { setSection("profile"); setShowCreate(false); setSelectedGig(null); alert("Please complete your Business Profile before submitting a gig. We need at least your company name and email."); return; }
+          setShowCreate(true); setSelectedGig(null);
+        }}>+ New Gig</Btn></div>}
         <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer", padding: "6px 0" }}>Sign out</button></div>
       </div>
 
@@ -973,7 +1100,10 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
 
           {!loading && !showCreate && !selectedGig && section === "projects" && (
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => setShowCreate(true)}>+ New Gig</Btn>}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => {
+                if (!profile.company_name || !profile.company_email) { setSection("profile"); setShowCreate(false); alert("Please complete your Business Profile first."); return; }
+                setShowCreate(true);
+              }}>+ New Gig</Btn>}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
               {gigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No projects yet</T>{isCust && <Btn sm onClick={() => setShowCreate(true)} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card> : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: accent, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>
