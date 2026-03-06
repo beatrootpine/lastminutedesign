@@ -1001,9 +1001,10 @@ const auth = async (a, d) => { try { const r = await fetch("/api/auth", { method
 const pay = async (a, d) => { try { const r = await fetch("/api/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: a, ...d }) }); return r.json(); } catch (e) { return { error: e.message }; } };
 
 const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
-  const [mode, setMode] = useState(im||"login"); const [role, setRole] = useState(ir||"customer"); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [name, setName] = useState(""); const [city, setCity] = useState(""); const [bio, setBio] = useState(""); const [skills, setSkills] = useState([]); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
+  const [mode, setMode] = useState(im||"login"); const [role, setRole] = useState(ir||"customer"); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [name, setName] = useState(""); const [city, setCity] = useState(""); const [bio, setBio] = useState(""); const [skills, setSkills] = useState([]); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const [resetSent, setResetSent] = useState(false); const [showReset, setShowReset] = useState(false);
   const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
   const iDS = mode === "signup" && role === "designer";
+
   const submit = async () => {
     setError(""); setLoading(true);
     try {
@@ -1011,22 +1012,81 @@ const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
       else { const r = await auth("login", { email, password }); if (r.error) throw new Error(r.error); if (r.profile) onAuth(r.role, r.profile); else throw new Error("Account not found"); }
     } catch (e) { setError(e.message); } setLoading(false);
   };
+
+  const forgotPassword = async () => {
+    if (!email) { setError("Enter your email first"); return; }
+    setLoading(true); setError("");
+    const r = await auth("forgot_password", { email });
+    if (r.error) { setError(r.error); } else { setResetSent(true); }
+    setLoading(false);
+  };
+
+  const googleSignIn = async () => {
+    setLoading(true);
+    const r = await auth("google_url", { role });
+    if (r.url) { localStorage.setItem("lmd_google_role", role); window.location.href = r.url; }
+    else { setError("Google sign in unavailable"); setLoading(false); }
+  };
+
+  const googleBtnStyle = { width: "100%", padding: "10px 16px", borderRadius: 8, border: `1px solid ${X.border}`, background: X.bg, color: X.white, fontFamily: "Inter", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 };
+
   return (
     <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ maxWidth: iDS ? 460 : 360, width: "100%" }}>
         <Nav go={go} minimal />
         <div style={{ paddingTop: 80 }}>
           <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back</button>
-          <div style={{ textAlign: "center", marginBottom: 20 }}><H s={22}>{mode === "login" ? "Welcome back" : role === "designer" ? "Join as Designer" : "Create account"}</H></div>
-          {mode === "signup" && <div style={{ display: "flex", gap: 4, marginBottom: 16, background: X.card, borderRadius: 8, padding: 4, border: `1px solid ${X.border}` }}>{["customer","designer"].map(r => <button key={r} onClick={() => setRole(r)} style={{ flex: 1, padding: 8, borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer", background: role===r?(r==="designer"?X.teal:X.orange):"transparent", color: role===r?X.bg:X.gray }}>{r==="customer"?"I need design":"I'm a designer"}</button>)}</div>}
+          <div style={{ textAlign: "center", marginBottom: 20 }}><H s={22}>{showReset ? "Reset Password" : mode === "login" ? "Welcome back" : role === "designer" ? "Join as Designer" : "Create account"}</H></div>
+
+          {mode === "signup" && !showReset && <div style={{ display: "flex", gap: 4, marginBottom: 16, background: X.card, borderRadius: 8, padding: 4, border: `1px solid ${X.border}` }}>{["customer","designer"].map(r => <button key={r} onClick={() => setRole(r)} style={{ flex: 1, padding: 8, borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer", background: role===r?(r==="designer"?X.teal:X.orange):"transparent", color: role===r?X.bg:X.gray }}>{r==="customer"?"I need design":"I'm a designer"}</button>)}</div>}
+
           <Card>
             {error && <div style={{ padding: "8px 12px", marginBottom: 12, borderRadius: 6, background: X.red+"18", border: `1px solid ${X.red}30`, color: X.red, fontSize: 12 }}>{error}</div>}
-            {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" />}
-            <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
-            <Field label="Password" value={password} onChange={setPassword} type="password" placeholder={mode==="signup"?"Min 6 chars":"Password"} />
-            {iDS && <><Field label="City" value={city} onChange={setCity} /><Field label="Bio" value={bio} onChange={setBio} textarea /><div style={{ marginBottom: 14 }}><label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label><div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name)?X.tealDim:X.bg, color: skills.includes(s.name)?X.teal:X.gray, border: `1px solid ${skills.includes(s.name)?X.tealBorder:X.border}`, cursor: "pointer" }}>{s.name}</button>)}</div></div></>}
-            <Btn full onClick={submit} disabled={loading||!email||!password||(mode==="signup"&&!name)}>{loading?"Please wait...":mode==="login"?"Sign In →":"Create Account →"}</Btn>
-            <div style={{ textAlign: "center", marginTop: 14 }}><button onClick={() => { setMode(mode==="login"?"signup":"login"); setError(""); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>{mode==="login"?"Don't have an account? Sign up →":"Already have an account? Sign in →"}</button></div>
+
+            {/* Forgot password mode */}
+            {showReset ? (
+              resetSent ? (
+                <div style={{ textAlign: "center", padding: "16px 0" }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
+                  <T style={{ color: X.white, fontWeight: 600, marginBottom: 6 }}>Check your email</T>
+                  <T dim sm>We've sent a password reset link to <span style={{ color: X.white }}>{email}</span></T>
+                  <button onClick={() => { setShowReset(false); setResetSent(false); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter", marginTop: 16 }}>← Back to sign in</button>
+                </div>
+              ) : (
+                <>
+                  <T dim sm style={{ marginBottom: 14 }}>Enter your email and we'll send you a reset link</T>
+                  <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
+                  <Btn full onClick={forgotPassword} disabled={loading || !email}>{loading ? "Sending..." : "Send Reset Link"}</Btn>
+                  <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => setShowReset(false)} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>← Back to sign in</button></div>
+                </>
+              )
+            ) : (
+              <>
+                {/* Google sign in */}
+                <button onClick={googleSignIn} disabled={loading} style={googleBtnStyle}>
+                  <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                  Continue with Google
+                </button>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                  <div style={{ flex: 1, height: 1, background: X.border }} />
+                  <T sm dim>or</T>
+                  <div style={{ flex: 1, height: 1, background: X.border }} />
+                </div>
+
+                {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" />}
+                <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
+                <Field label="Password" value={password} onChange={setPassword} type="password" placeholder={mode==="signup"?"Min 6 chars":"Password"} />
+
+                {/* Forgot password link */}
+                {mode === "login" && <div style={{ textAlign: "right", marginTop: -8, marginBottom: 12 }}><button onClick={() => setShowReset(true)} style={{ background: "none", border: "none", color: X.gray, fontSize: 11, cursor: "pointer", fontFamily: "Inter" }}>Forgot password?</button></div>}
+
+                {iDS && <><Field label="City" value={city} onChange={setCity} /><Field label="Bio" value={bio} onChange={setBio} textarea /><div style={{ marginBottom: 14 }}><label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label><div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name)?X.tealDim:X.bg, color: skills.includes(s.name)?X.teal:X.gray, border: `1px solid ${skills.includes(s.name)?X.tealBorder:X.border}`, cursor: "pointer" }}>{s.name}</button>)}</div></div></>}
+
+                <Btn full onClick={submit} disabled={loading||!email||!password||(mode==="signup"&&!name)}>{loading?"Please wait...":mode==="login"?"Sign In →":"Create Account →"}</Btn>
+                <div style={{ textAlign: "center", marginTop: 14 }}><button onClick={() => { setMode(mode==="login"?"signup":"login"); setError(""); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>{mode==="login"?"Don't have an account? Sign up →":"Already have an account? Sign in →"}</button></div>
+              </>
+            )}
           </Card>
         </div>
       </div>
@@ -1042,9 +1102,39 @@ export default function App() {
   useEffect(() => {
     const s = localStorage.getItem("lmd_session");
     if (s) { try { const { role: r, profile: p } = JSON.parse(s); setRole(r); setProfile(p); setPg("dashboard"); } catch(e) { localStorage.removeItem("lmd_session"); } }
-    const ref = new URLSearchParams(window.location.search).get("reference") || new URLSearchParams(window.location.search).get("trxref");
+
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("reference") || params.get("trxref");
     if (ref) { window.history.replaceState({}, "", "/"); verifyPay(ref); }
+
+    // Handle Google OAuth callback
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token")) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      if (accessToken) {
+        window.history.replaceState({}, "", "/");
+        handleGoogleCallback(accessToken);
+      }
+    }
   }, []);
+
+  const handleGoogleCallback = async (token) => {
+    note("Signing in with Google...");
+    const r = await auth("google_session", { access_token: token });
+    if (r.error) { note("Google sign in failed"); return; }
+    if (r.profile && r.role) {
+      handleAuth(r.role, r.profile);
+    } else if (r.needsProfile) {
+      // New Google user — create profile automatically as customer
+      const savedRole = localStorage.getItem("lmd_google_role") || "customer";
+      const userName = r.user.user_metadata?.full_name || r.user.email?.split("@")[0] || "User";
+      const cr = await auth("create_google_profile", { user_id: r.user.id, email: r.user.email, name: userName, role: savedRole });
+      localStorage.removeItem("lmd_google_role");
+      if (cr.profile) handleAuth(cr.role, cr.profile);
+      else note("Failed to create profile");
+    }
+  };
 
   const verifyPay = async (ref) => { note("Verifying payment..."); const r = await pay("verify", { reference: ref }); if (r.success && r.paid) { note(r.designer ? `Matched with ${r.designer.name}!` : "Payment confirmed!"); setPg("dashboard"); } else note("Payment verification failed"); };
   const handleAuth = (r, p) => { setRole(r); setProfile(p); setPg("dashboard"); localStorage.setItem("lmd_session", JSON.stringify({ role: r, profile: p })); note(`Welcome, ${p.name}!`); };
