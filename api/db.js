@@ -132,6 +132,48 @@ export default async function handler(req, res) {
         return res.json({ file: f[0] });
       }
 
+      // ─── PROFILE UPDATES ──────────────────────────────────────
+      case "update_customer_profile": {
+        const { customer_id, ...fields } = req.body;
+        const allowed = ["name", "phone", "company_name", "company_email", "company_phone", "company_address", "company_website", "company_logo_path", "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "brand_colors", "tagline", "registration_number"];
+        const clean = {};
+        for (const k of allowed) { if (fields[k] !== undefined) clean[k] = fields[k]; }
+        await db(`customers?id=eq.${customer_id}`, { method: "PATCH", body: clean });
+        const updated = await db(`customers?id=eq.${customer_id}&limit=1`);
+        return res.json({ customer: updated[0] });
+      }
+
+      case "get_customer_profile": {
+        const { customer_id: cpId } = req.query;
+        const c = await db(`customers?id=eq.${cpId}&limit=1`);
+        return res.json({ customer: c?.[0] || null });
+      }
+
+      case "update_designer_profile": {
+        const { designer_id, ...dFields } = req.body;
+        const dAllowed = ["name", "phone", "city", "bio", "skills", "id_number", "address", "bank_name", "bank_account", "bank_branch", "id_document_path", "address_proof_path", "bank_proof_path", "profile_complete", "is_online"];
+        const dClean = {};
+        for (const k of dAllowed) { if (dFields[k] !== undefined) dClean[k] = dFields[k]; }
+        await db(`designers?id=eq.${designer_id}`, { method: "PATCH", body: dClean });
+        const dUpdated = await db(`designers?id=eq.${designer_id}&limit=1`);
+        return res.json({ designer: dUpdated[0] });
+      }
+
+      case "get_designer_profile": {
+        const { designer_id: dpId } = req.query;
+        const d = await db(`designers?id=eq.${dpId}&limit=1`);
+        return res.json({ designer: d?.[0] || null });
+      }
+
+      case "get_designer_earnings": {
+        const { designer_id: eId } = req.query;
+        const gigs = await db(`gigs?designer_id=eq.${eId}&status=in.(completed,delivered)&order=created_at.desc`);
+        const total = gigs.reduce((s, g) => s + (g.price || 0) * 0.75, 0);
+        const thisMonth = gigs.filter(g => new Date(g.created_at).getMonth() === new Date().getMonth()).reduce((s, g) => s + (g.price || 0) * 0.75, 0);
+        const thisWeek = gigs.filter(g => (Date.now() - new Date(g.created_at).getTime()) < 7 * 86400000).reduce((s, g) => s + (g.price || 0) * 0.75, 0);
+        return res.json({ total: Math.round(total), thisMonth: Math.round(thisMonth), thisWeek: Math.round(thisWeek), gigCount: gigs.length, gigs });
+      }
+
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
