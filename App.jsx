@@ -36,7 +36,7 @@ const ALL_SERVICES = Object.values(SERVICES).flat();
 const TIERS = {
   4: { label: "4 Hours", tag: "RUSH", desc: "Ultra-priority. Work starts immediately." },
   12: { label: "12 Hours", tag: "EXPRESS", desc: "Same-day delivery. Starts within 2 hours." },
-  24: { label: "24 Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
+  24: { label: "24+ Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
 };
 
 // ─── API HELPER ─────────────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ const Landing = ({ go }) => {
         <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
           <span style={{ color: X.orange }}>lastminute</span>.design
         </div>
-        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
+        <T dim sm>Owned by Branded SA Corporation · Proudly South African</T>
         <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
         <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
       </div>
