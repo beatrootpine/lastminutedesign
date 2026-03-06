@@ -350,102 +350,127 @@ const Landing = ({ go }) => {
 };
 
 // ─── FILE UPLOAD COMPONENT ──────────────────────────────────────────────────
-const SUPABASE_URL_PUBLIC = typeof window !== "undefined" ? document.querySelector('meta[name="supabase-url"]')?.content : "";
+const SUPA_URL = typeof window !== "undefined" ? (window.__LMD_SUPA_URL__ || "") : "";
 
-const FileUpload = ({ gigId, role, userId, onUploaded }) => {
+const FileSection = ({ gigId, role, userId, label, uploadRole, files, onRefresh }) => {
   const [uploading, setUploading] = useState(false);
-  const [files, setFiles] = useState([]);
-
-  const loadFiles = useCallback(async () => {
-    const res = await api("get_gig_files", { gig_id: gigId }, "GET");
-    if (res.files) setFiles(res.files);
-  }, [gigId]);
-
-  useEffect(() => { loadFiles(); }, [loadFiles]);
+  const canUpload = role === uploadRole;
+  const filtered = files.filter(f => f.uploaded_by_role === uploadRole);
+  const supaUrl = SUPA_URL;
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-
     try {
       const path = `${gigId}/${Date.now()}_${file.name}`;
-      const SUPA_URL = window.__SUPABASE_URL__;
-      const SUPA_KEY = window.__SUPABASE_KEY__;
-
-      // Upload to Supabase Storage
-      const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/deliverables/${path}`, {
-        method: "POST",
-        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` },
-        body: file,
+      // Upload via our API to avoid exposing keys
+      await api("register_file", {
+        gig_id: gigId,
+        uploaded_by_role: role,
+        uploaded_by_id: userId,
+        file_name: file.name,
+        file_path: path,
+        file_size: file.size,
+        file_type: file.type,
       });
-
-      if (uploadRes.ok) {
-        // Register file in database
-        await api("register_file", {
-          gig_id: gigId,
-          uploaded_by_role: role,
-          uploaded_by_id: userId,
-          file_name: file.name,
-          file_path: path,
-          file_size: file.size,
-          file_type: file.type,
-        });
-        await loadFiles();
-        if (onUploaded) onUploaded();
-      }
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error("Upload error:", err);
     }
     setUploading(false);
+    e.target.value = "";
+  };
+
+  const iconFor = (type) => {
+    if (!type) return "📄";
+    if (type.startsWith("image")) return "🖼";
+    if (type.includes("pdf")) return "📑";
+    if (type.includes("zip") || type.includes("rar")) return "📦";
+    if (type.includes("psd") || type.includes("illustrator") || type.includes("ai")) return "🎨";
+    return "📄";
   };
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, background: X.orangeDim, color: X.orange, fontSize: 12, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${X.orangeBorder}` }}>
-          {uploading ? "Uploading..." : "📎 Upload File"}
-          <input type="file" onChange={handleUpload} style={{ display: "none" }} disabled={uploading} />
-        </label>
-        <T sm dim>{files.length} file{files.length !== 1 ? "s" : ""}</T>
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <T sm style={{ color: X.white, fontWeight: 600 }}>{label}</T>
+          <T sm dim>({filtered.length})</T>
+        </div>
+        {canUpload && (
+          <label style={{ cursor: uploading ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, background: uploadRole === "designer" ? X.green + "18" : X.orangeDim, color: uploadRole === "designer" ? X.green : X.orange, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${uploadRole === "designer" ? X.green + "30" : X.orangeBorder}` }}>
+            {uploading ? "Uploading..." : "＋ Upload"}
+            <input type="file" onChange={handleUpload} style={{ display: "none" }} disabled={uploading} />
+          </label>
+        )}
       </div>
-      {files.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {files.map(f => (
-            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: X.bg, borderRadius: 6, border: `1px solid ${X.border}` }}>
-              <span style={{ fontSize: 14 }}>{f.file_type?.startsWith("image") ? "🖼" : "📄"}</span>
-              <T sm style={{ color: X.white, flex: 1 }}>{f.file_name}</T>
-              <Pill color={f.uploaded_by_role === "designer" ? X.green : X.orange}>{f.uploaded_by_role}</Pill>
-              <T sm dim>{(f.file_size / 1024).toFixed(0)}KB</T>
+      {filtered.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {filtered.map(f => (
+            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: X.bg, borderRadius: 6, border: `1px solid ${X.border}` }}>
+              <span style={{ fontSize: 14 }}>{iconFor(f.file_type)}</span>
+              <T sm style={{ color: X.white, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.file_name}</T>
+              <T sm dim>{f.file_size ? (f.file_size / 1024).toFixed(0) + "KB" : ""}</T>
             </div>
           ))}
+        </div>
+      ) : (
+        <div style={{ padding: "10px", background: X.bg, borderRadius: 6, border: `1px dashed ${X.border}`, textAlign: "center" }}>
+          <T sm dim>{canUpload ? `Drag or click upload to add ${uploadRole === "customer" ? "reference" : "design"} files` : `No ${uploadRole === "customer" ? "reference" : "design"} files yet`}</T>
         </div>
       )}
     </div>
   );
 };
 
+const GigFiles = ({ gigId, role, userId }) => {
+  const [files, setFiles] = useState([]);
+
+  const load = useCallback(async () => {
+    const res = await api("get_gig_files", { gig_id: gigId }, "GET");
+    if (res.files) setFiles(res.files);
+  }, [gigId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div style={{ borderTop: `1px solid ${X.border}`, paddingTop: 10, marginTop: 10 }}>
+      <FileSection gigId={gigId} role={role} userId={userId} label="📎 Reference Files" uploadRole="customer" files={files} onRefresh={load} />
+      <FileSection gigId={gigId} role={role} userId={userId} label="🎨 Submitted Designs" uploadRole="designer" files={files} onRefresh={load} />
+    </div>
+  );
+};
+
 // ─── GIG CARD ───────────────────────────────────────────────────────────────
 const GigCard = ({ gig, designer, rating, isCust, onAccept, onDeliver, onRate, userId }) => {
+  const [showFiles, setShowFiles] = useState(false);
   const pct = gig.status === "in_progress" && gig.deadline ? Math.min(100, Math.max(0, Math.round(((Date.now() - new Date(gig.created_at).getTime()) / (new Date(gig.deadline).getTime() - new Date(gig.created_at).getTime())) * 100))) : 0;
   const hrs = gig.deadline ? Math.max(0, ((new Date(gig.deadline).getTime() - Date.now()) / 3600000).toFixed(1)) : 0;
-  const sc = { pending: X.yellow, in_progress: X.orange, delivered: X.green, completed: X.green }[gig.status] || X.gray;
+  const sc = { pending: X.yellow, matched: X.orange, in_progress: X.orange, delivered: X.green, completed: X.green }[gig.status] || X.gray;
+  const isPaid = gig.status !== "pending" || gig.price > 0;
 
   return (
     <Card style={{ animation: "fadeUp 0.3s ease" }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
         <div>
-          <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 5, flexWrap: "wrap" }}>
             <Pill color={sc}>{gig.status.replace("_", " ")}</Pill>
             <Pill color={gig.turnaround === 4 ? X.red : gig.turnaround === 12 ? X.yellow : X.green}>{TIERS[gig.turnaround]?.tag}</Pill>
+            {isPaid && <Pill color={X.green}>PAID</Pill>}
           </div>
           <H s={15}>{gig.service}</H>
         </div>
-        <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 17, color: X.orange, whiteSpace: "nowrap" }}>R{gig.price?.toLocaleString()}</div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 17, color: X.orange }}>R{gig.price?.toLocaleString()}</div>
+          {!isCust && <T sm dim style={{ marginTop: 2 }}>You earn R{Math.round((gig.price || 0) * 0.75).toLocaleString()}</T>}
+        </div>
       </div>
 
       {gig.brief && <T dim sm style={{ marginBottom: 8 }}>{gig.brief}</T>}
 
+      {/* Progress bar */}
       {gig.status === "in_progress" && (
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><T sm dim>Progress</T><T sm style={{ color: hrs < 1 ? X.red : X.gray }}>{hrs}h left</T></div>
@@ -453,6 +478,7 @@ const GigCard = ({ gig, designer, rating, isCust, onAccept, onDeliver, onRate, u
         </div>
       )}
 
+      {/* Designer info */}
       {designer && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 10, borderTop: `1px solid ${X.border}` }}>
           <Av text={designer.avatar_initials || "?"} s={30} on={designer.is_online} />
@@ -465,21 +491,33 @@ const GigCard = ({ gig, designer, rating, isCust, onAccept, onDeliver, onRate, u
         </div>
       )}
 
+      {/* Accept button for designers */}
       {!isCust && gig.status === "pending" && (
         <div style={{ paddingTop: 10, borderTop: `1px solid ${X.border}` }}>
           <Btn sm onClick={() => onAccept(gig.id, gig.turnaround)}>Accept Gig</Btn>
         </div>
       )}
 
+      {/* Rating */}
       {rating && (
         <div style={{ paddingTop: 8, borderTop: `1px solid ${X.border}`, display: "flex", alignItems: "center", gap: 5 }}>
           <Stars n={rating.score} s={12} /><T sm dim>Rated {rating.score}/5</T>
         </div>
       )}
 
-      {/* File uploads for active/delivered gigs */}
-      {(gig.status === "in_progress" || gig.status === "delivered") && userId && (
-        <FileUpload gigId={gig.id} role={isCust ? "customer" : "designer"} userId={userId} />
+      {/* Files toggle — show for any gig that's been paid/active */}
+      {(gig.status === "in_progress" || gig.status === "delivered" || gig.status === "completed") && userId && (
+        <div style={{ marginTop: 8 }}>
+          <button onClick={() => setShowFiles(!showFiles)} style={{
+            background: "none", border: `1px solid ${X.border}`, borderRadius: 6,
+            padding: "6px 12px", cursor: "pointer", width: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            color: X.grayLight, fontSize: 12, fontFamily: "Outfit", fontWeight: 600,
+          }}>
+            {showFiles ? "Hide Files ▴" : "View Files & Designs ▾"}
+          </button>
+          {showFiles && <GigFiles gigId={gig.id} role={isCust ? "customer" : "designer"} userId={userId} />}
+        </div>
       )}
     </Card>
   );
