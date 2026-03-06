@@ -79,25 +79,36 @@ const themes = {
     bg: "#09090b", card: "#131316", border: "#1e1e24", hover: "#1a1a1f",
     white: "#fafafa", gray: "#71717a", grayLight: "#a1a1aa",
     navBg: "rgba(9,9,11,0.85)", cardBg: "#131316",
+    inputBg: "#09090b",
   },
   light: {
-    bg: "#f8f8fa", card: "#ffffff", border: "#e4e4e7", hover: "#f0f0f2",
-    white: "#09090b", gray: "#71717a", grayLight: "#52525b",
-    navBg: "rgba(255,255,255,0.9)", cardBg: "#ffffff",
+    bg: "#fafafa", card: "#ffffff", border: "#e5e5e5", hover: "#f5f5f5",
+    white: "#18181b", gray: "#71717a", grayLight: "#52525b",
+    navBg: "rgba(255,255,255,0.92)", cardBg: "#ffffff",
+    inputBg: "#f4f4f5",
   },
 };
 
-const accents = {
-  orange: "#f97316", orangeLight: "#fb923c",
-  orangeDim: "rgba(249,115,22,0.1)", orangeBorder: "rgba(249,115,22,0.2)",
-  teal: "#06b6d4", tealLight: "#22d3ee",
-  tealDim: "rgba(6,182,212,0.1)", tealBorder: "rgba(6,182,212,0.2)",
-  green: "#22c55e", red: "#ef4444", yellow: "#eab308",
+const accentsByTheme = {
+  dark: {
+    orange: "#f97316", orangeLight: "#fb923c",
+    orangeDim: "rgba(249,115,22,0.1)", orangeBorder: "rgba(249,115,22,0.2)",
+    teal: "#06b6d4", tealLight: "#22d3ee",
+    tealDim: "rgba(6,182,212,0.1)", tealBorder: "rgba(6,182,212,0.2)",
+    green: "#22c55e", red: "#ef4444", yellow: "#eab308",
+  },
+  light: {
+    orange: "#ea580c", orangeLight: "#f97316",
+    orangeDim: "rgba(234,88,12,0.08)", orangeBorder: "rgba(234,88,12,0.15)",
+    teal: "#0891b2", tealLight: "#06b6d4",
+    tealDim: "rgba(8,145,178,0.08)", tealBorder: "rgba(8,145,178,0.15)",
+    green: "#16a34a", red: "#dc2626", yellow: "#ca8a04",
+  },
 };
 
 // Theme context — mutable reference
-let X = { ...themes.dark, ...accents };
-const setTheme = (t) => { Object.assign(X, themes[t], accents); };
+let X = { ...themes.dark, ...accentsByTheme.dark };
+const setTheme = (t) => { Object.assign(X, themes[t], accentsByTheme[t]); };
 
 // ─── UI PRIMITIVES ──────────────────────────────────────────────────────────
 const H = ({ children, s = 24, style }) => <h2 style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: s, color: X.white, letterSpacing: "-0.02em", lineHeight: 1.2, ...style }}>{children}</h2>;
@@ -107,25 +118,25 @@ const Stars = ({ n = 5, s = 13 }) => <span style={{ letterSpacing: 1 }}>{[1,2,3,
 const Av = ({ text, s = 36, on }) => <div style={{ width: s, height: s, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${X.orange}, ${X.orangeLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: s * 0.35, color: X.bg, position: "relative" }}>{text}{on !== undefined && <span style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: on ? X.green : "#555", border: `2px solid ${X.card}` }} />}</div>;
 
 const Btn = ({ children, onClick, v = "primary", full, disabled, sm, style: st }) => {
-  const vs = { primary: { background: X.orange, color: X.bg }, secondary: { background: X.card, color: X.white, border: `1px solid ${X.border}` }, ghost: { background: "transparent", color: X.gray, border: `1px solid ${X.border}` } };
+  const vs = { primary: { background: X.orange, color: "#ffffff" }, secondary: { background: X.card, color: X.white, border: `1px solid ${X.border}` }, ghost: { background: "transparent", color: X.gray, border: `1px solid ${X.border}` } };
   return <button onClick={disabled ? undefined : onClick} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: sm ? 12 : 13, padding: sm ? "7px 14px" : "10px 20px", borderRadius: 8, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.35 : 1, transition: "all 0.15s", width: full ? "100%" : "auto", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, ...vs[v], ...st }}>{children}</button>;
 };
 
-const Card = ({ children, style: st, onClick }) => <div onClick={onClick} style={{ background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: 20, cursor: onClick ? "pointer" : "default", ...st }}>{children}</div>;
+const Card = ({ children, style: st, onClick }) => <div onClick={onClick} style={{ background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: 20, cursor: onClick ? "pointer" : "default", boxShadow: X.bg === "#fafafa" ? "0 1px 3px rgba(0,0,0,0.04)" : "none", ...st }}>{children}</div>;
 
 const Field = ({ label, value, onChange, type = "text", placeholder, textarea }) => {
-  const b = { width: "100%", background: X.bg, border: `1px solid ${X.border}`, borderRadius: 8, padding: "10px 14px", color: X.white, fontFamily: "Inter", fontSize: 14, outline: "none" };
+  const b = { width: "100%", background: X.inputBg || X.bg, border: `1px solid ${X.border}`, borderRadius: 8, padding: "10px 14px", color: X.white, fontFamily: "Inter", fontSize: 14, outline: "none" };
   return <div style={{ marginBottom: 14 }}>{label && <label style={{ display: "block", marginBottom: 5, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</label>}{textarea ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3} style={{ ...b, resize: "vertical" }} /> : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={b} />}</div>;
 };
 
 const Bar = ({ pct }) => <div style={{ width: "100%", height: 4, background: X.bg, borderRadius: 2, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: pct > 80 ? X.red : pct > 50 ? X.yellow : X.orange, transition: "width 0.4s" }} /></div>;
 
-const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]); return <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: "12px 20px", fontFamily: "Outfit", fontWeight: 600, fontSize: 13, color: X.white, animation: "fadeIn 0.2s ease", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 8 }}><span style={{ color: X.orange }}>●</span> {msg}</div>; };
+const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]); return <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: "12px 20px", fontFamily: "Outfit", fontWeight: 600, fontSize: 13, color: X.white, animation: "fadeIn 0.2s ease", boxShadow: X.bg === "#fafafa" ? "0 4px 16px rgba(0,0,0,0.08)" : "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 8 }}><span style={{ color: X.orange }}>●</span> {msg}</div>; };
 
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.orange, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
 
 // ─── LAYOUT ─────────────────────────────────────────────────────────────────
-const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: "rgba(9,9,11,0.85)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log In</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
+const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: X.navBg, backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log In</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
 
 const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
 
@@ -147,11 +158,13 @@ const Landing = ({ go }) => {
         position: "relative", overflow: "hidden", minHeight: 520,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "100px 20px 60px",
-        background: `linear-gradient(135deg, ${X.bg} 0%, #1a1000 40%, #0a0a12 70%, ${X.bg} 100%)`,
+        background: X.bg === "#fafafa"
+          ? `linear-gradient(135deg, #fff8f0 0%, #fef3e2 40%, #f0f9ff 70%, #fafafa 100%)`
+          : `linear-gradient(135deg, ${X.bg} 0%, #1a1000 40%, #0a0a12 70%, ${X.bg} 100%)`,
       }}>
         {/* Decorative elements */}
-        <div style={{ position: "absolute", top: 40, right: "10%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${X.orange}12, transparent 70%)`, filter: "blur(60px)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: 20, left: "5%", width: 200, height: 200, borderRadius: "50%", background: `radial-gradient(circle, ${X.teal}10, transparent 70%)`, filter: "blur(50px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 40, right: "10%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${X.orange}${X.bg === "#fafafa" ? "15" : "12"}, transparent 70%)`, filter: "blur(60px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: 20, left: "5%", width: 200, height: 200, borderRadius: "50%", background: `radial-gradient(circle, ${X.teal}${X.bg === "#fafafa" ? "12" : "10"}, transparent 70%)`, filter: "blur(50px)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "15%", left: "8%", width: 1, height: 120, background: `linear-gradient(to bottom, ${X.orange}40, transparent)`, transform: "rotate(20deg)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", bottom: "20%", right: "12%", width: 1, height: 80, background: `linear-gradient(to bottom, ${X.teal}30, transparent)`, transform: "rotate(-15deg)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "50%", right: "20%", width: 60, height: 60, border: `1px solid ${X.orange}15`, borderRadius: 12, transform: "rotate(45deg)", pointerEvents: "none" }} />
@@ -298,7 +311,7 @@ const Landing = ({ go }) => {
       </div>
 
       {/* ─── FOR DESIGNERS ─── */}
-      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(6,182,212,0.04), transparent)" }}>
+      <div style={{ borderTop: `1px solid ${X.border}`, background: X.bg === "#fafafa" ? "linear-gradient(180deg, #f0fafb, #fafafa)" : "linear-gradient(180deg, rgba(6,182,212,0.04), transparent)" }}>
         <Section>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <Pill color={X.teal}>For Designers</Pill>
@@ -373,7 +386,7 @@ const Landing = ({ go }) => {
       </div>
 
       {/* ─── FINAL CTA ─── */}
-      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(249,115,22,0.06), transparent)" }}>
+      <div style={{ borderTop: `1px solid ${X.border}`, background: X.bg === "#fafafa" ? "linear-gradient(180deg, #fef8f0, #fafafa)" : "linear-gradient(180deg, rgba(249,115,22,0.06), transparent)" }}>
         <Section style={{ textAlign: "center", paddingTop: 60, paddingBottom: 60 }}>
           <SectionH>Ready to stop missing deadlines?</SectionH>
           <SectionP style={{ margin: "0 auto 28px" }}>
@@ -1086,7 +1099,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
 
       {/* Main */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "rgba(9,9,11,0.95)", backdropFilter: "blur(10px)", zIndex: 50 }}>
+        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: X.navBg, backdropFilter: "blur(10px)", zIndex: 50 }}>
           <button onClick={() => setSideOpen(!sideOpen)} style={{ background: "none", border: "none", color: X.gray, fontSize: 18, cursor: "pointer" }}>☰</button>
           {!isCust && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: profile.is_online ? X.green : X.gray }} /><T sm dim>{profile.is_online ? "Online" : "Offline"}</T></div>}
         </div>
