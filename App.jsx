@@ -116,58 +116,234 @@ const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", back
 // ─── LANDING ────────────────────────────────────────────────────────────────
 const Landing = ({ go }) => {
   const [openCat, setOpenCat] = useState(null);
+  const Section = ({ children, style: s }) => <div style={{ maxWidth: 800, margin: "0 auto", padding: "80px 20px", ...s }}>{children}</div>;
+  const SectionLabel = ({ children }) => <Pill>{children}</Pill>;
+  const SectionH = ({ children }) => <h2 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(26px, 4vw, 38px)", color: X.white, letterSpacing: "-0.03em", lineHeight: 1.15, margin: "14px 0 10px" }}>{children}</h2>;
+  const SectionP = ({ children }) => <p style={{ fontSize: 16, color: X.grayLight, lineHeight: 1.6, maxWidth: 540 }}>{children}</p>;
+  const FeatureCard = ({ icon, title, desc }) => <Card style={{ padding: 24, flex: "1 1 200px" }}><div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div><div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>{title}</div><T dim sm>{desc}</T></Card>;
+
   return (
     <div style={{ background: X.bg, minHeight: "100vh" }}>
       <Nav go={go} />
-      <div style={{ paddingTop: 120, textAlign: "center", maxWidth: 600, margin: "0 auto", padding: "120px 20px 60px" }}>
-        <Pill>24/7 Creative Services</Pill>
-        <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(36px, 6vw, 60px)", lineHeight: 1.08, color: X.white, margin: "20px 0 14px", letterSpacing: "-0.03em" }}>
-          Design done<br /><span style={{ color: X.orange }}>before sunrise.</span>
+
+      {/* ─── HERO ─── */}
+      <div style={{ paddingTop: 100, textAlign: "center", maxWidth: 680, margin: "0 auto", padding: "100px 20px 40px" }}>
+        <Pill>24/7 Rush Creative Studio</Pill>
+        <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(38px, 7vw, 68px)", lineHeight: 1.06, color: X.white, margin: "20px 0 16px", letterSpacing: "-0.03em" }}>
+          Never miss a<br />deadline <span style={{ color: X.orange }}>again.</span>
         </h1>
-        <T style={{ maxWidth: 420, margin: "0 auto 32px", fontSize: 15 }}>Pick your deadline. We match you with a vetted designer instantly. No back-and-forth. Just great design, fast.</T>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 32 }}>
-          {Object.entries(TIERS).map(([h, { tag, desc }]) => (
-            <Card key={h} onClick={() => go("customer-login")} style={{ cursor: "pointer", textAlign: "center", padding: 16 }}>
-              <Pill color={h === "4" ? X.red : h === "12" ? X.yellow : X.green}>{tag}</Pill>
-              <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 28, color: X.white, margin: "8px 0 2px" }}>{h}h</div>
-              <T sm dim>{desc}</T>
-            </Card>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-          <Btn onClick={() => go("customer-login")}>Submit a Gig →</Btn>
-          <Btn v="secondary" onClick={() => go("designer-register")}>I'm a Designer</Btn>
+        <p style={{ fontSize: 17, color: X.grayLight, maxWidth: 480, margin: "0 auto 16px", lineHeight: 1.6 }}>
+          On-demand graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
+        </p>
+        <p style={{ fontSize: 13, color: X.gray, marginBottom: 36 }}>
+          No contracts · No subscriptions · Pay per project
+        </p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          <Btn onClick={() => go("customer-login")} style={{ padding: "14px 28px", fontSize: 15 }}>Get Design Now →</Btn>
+          <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15 }}>Earn as a Designer</Btn>
         </div>
       </div>
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px 80px" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}><H s={26}>Services & Pricing</H><T dim style={{ marginTop: 4 }}>All prices in ZAR · excl. VAT</T></div>
-        {Object.entries(SERVICES).map(([cat, items]) => (
-          <div key={cat} style={{ marginBottom: 6 }}>
-            <button onClick={() => setOpenCat(openCat === cat ? null : cat)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 16px", background: X.card, border: `1px solid ${X.border}`, borderRadius: openCat === cat ? "10px 10px 0 0" : 10, color: X.white, fontFamily: "Outfit", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
-              {cat}<span style={{ color: X.gray, fontSize: 16, transition: "transform 0.2s", transform: openCat === cat ? "rotate(180deg)" : "none" }}>▾</span>
-            </button>
-            {openCat === cat && (
-              <div style={{ border: `1px solid ${X.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "7px 16px", background: X.bg }}><T sm dim>Service</T><T sm dim style={{ textAlign: "right" }}>4h</T><T sm dim style={{ textAlign: "right" }}>12h</T><T sm dim style={{ textAlign: "right" }}>24h</T></div>
-                {items.map((item, i) => (
-                  <div key={item.name} style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "9px 16px", background: i % 2 === 0 ? X.card : "transparent", borderTop: `1px solid ${X.border}` }}>
-                    <T style={{ color: X.white, fontSize: 13 }}>{item.name}</T>
-                    <T sm style={{ textAlign: "right", color: X.orangeLight }}>R{item.prices[4].toLocaleString()}</T>
-                    <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[12].toLocaleString()}</T>
-                    <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[24].toLocaleString()}</T>
+
+      {/* ─── TRUST BAR ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}`, borderBottom: `1px solid ${X.border}`, padding: "20px 20px", marginTop: 40 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap" }}>
+          {[["247+", "Vetted Designers"], ["1,200+", "Gigs Delivered"], ["4.8★", "Avg Rating"], ["98%", "On-Time Delivery"]].map(([v, l]) => (
+            <div key={l} style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: X.orange }}>{v}</div>
+              <T sm dim>{l}</T>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── HOW IT WORKS ─── */}
+      <Section>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <SectionLabel>How It Works</SectionLabel>
+          <SectionH>Design in 3 simple steps</SectionH>
+          <SectionP style={{ margin: "0 auto" }}>No meetings. No endless revisions. Just fast, professional design when you need it most.</SectionP>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+          <Card style={{ padding: 24, textAlign: "center", borderTop: `2px solid ${X.orange}` }}>
+            <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 36, color: X.orange, marginBottom: 8 }}>01</div>
+            <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>Choose & Brief</div>
+            <T dim sm>Pick your services, upload your brief, choose 4h, 12h or 24h delivery.</T>
+          </Card>
+          <Card style={{ padding: 24, textAlign: "center", borderTop: `2px solid ${X.orangeLight}` }}>
+            <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 36, color: X.orangeLight, marginBottom: 8 }}>02</div>
+            <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>We Match & Create</div>
+            <T dim sm>We instantly assign a designer with the right skills. They start working immediately.</T>
+          </Card>
+          <Card style={{ padding: 24, textAlign: "center", borderTop: `2px solid ${X.green}` }}>
+            <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 36, color: X.green, marginBottom: 8 }}>03</div>
+            <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>Receive & Approve</div>
+            <T dim sm>Get your files delivered on time. Review, rate, and download — done.</T>
+          </Card>
+        </div>
+      </Section>
+
+      {/* ─── FOR BUSINESSES & INDIVIDUALS ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}` }}>
+        <Section>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+            <div>
+              <SectionLabel>For Businesses</SectionLabel>
+              <SectionH>The deadline is tomorrow.<br />We've got you.</SectionH>
+              <SectionP style={{ marginBottom: 20 }}>
+                Your printer needs files by 8am. The event is this weekend. The client changed the brief at 5pm. Sound familiar? We exist for exactly these moments.
+              </SectionP>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  ["⚡", "Rush jobs handled 24/7 — even weekends and holidays"],
+                  ["📐", "Professional, print-ready files every time"],
+                  ["🔒", "Consistent quality from vetted, rated designers"],
+                  ["📦", "Bundle multiple services in one order"],
+                ].map(([icon, text]) => (
+                  <div key={text} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+                    <T style={{ color: X.grayLight, fontSize: 14 }}>{text}</T>
                   </div>
                 ))}
               </div>
-            )}
+              <Btn onClick={() => go("customer-login")} style={{ marginTop: 20 }}>Submit a Gig →</Btn>
+            </div>
+            <div>
+              <SectionLabel>For Individuals</SectionLabel>
+              <SectionH>That thing you've been putting off? Done by morning.</SectionH>
+              <SectionP style={{ marginBottom: 20 }}>
+                Wedding invites. Your startup logo. A CV that actually stands out. A tombstone unveiling programme. Whatever you need designed — stop stressing and let a pro handle it.
+              </SectionP>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  ["💰", "Transparent pricing — see your total before you pay"],
+                  ["🎯", "No design jargon — just describe what you need"],
+                  ["🕐", "Pick your deadline: 4 hours, 12 hours, or 24 hours"],
+                  ["⭐", "Rate your designer and see reviews before they start"],
+                ].map(([icon, text]) => (
+                  <div key={text} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+                    <T style={{ color: X.grayLight, fontSize: 14 }}>{text}</T>
+                  </div>
+                ))}
+              </div>
+              <Btn onClick={() => go("customer-login")} style={{ marginTop: 20 }}>Get Started →</Btn>
+            </div>
           </div>
-        ))}
+        </Section>
       </div>
-      <div style={{ borderTop: `1px solid ${X.border}`, padding: "28px 20px", textAlign: "center" }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 40 }}>
-          {[["247+", "Designers"], ["1,200+", "Gigs Done"], ["4.8★", "Avg Rating"]].map(([v, l]) => (
-            <div key={l}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white }}>{v}</div><T sm dim>{l}</T></div>
+
+      {/* ─── TURNAROUND TIERS ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}` }}>
+        <Section style={{ textAlign: "center" }}>
+          <SectionLabel>Delivery Options</SectionLabel>
+          <SectionH>Pick your speed</SectionH>
+          <SectionP style={{ margin: "0 auto 32px" }}>Every tier gets the same quality. The only difference is how fast you need it.</SectionP>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            {[
+              { h: "4", tag: "RUSH", color: X.red, desc: "Ultra-priority. Your designer starts within minutes. For when it absolutely cannot wait.", icon: "⚡" },
+              { h: "12", tag: "EXPRESS", color: X.yellow, desc: "Same-day delivery. Perfect for that thing you forgot about this morning.", icon: "🔥" },
+              { h: "24", tag: "STANDARD", color: X.green, desc: "Next-day delivery. Best value. Great for planned projects with tight timelines.", icon: "🕐" },
+            ].map(t => (
+              <Card key={t.h} onClick={() => go("customer-login")} style={{ cursor: "pointer", padding: 24, textAlign: "center", borderTop: `2px solid ${t.color}` }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{t.icon}</div>
+                <Pill color={t.color}>{t.tag}</Pill>
+                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 36, color: X.white, margin: "10px 0 4px" }}>{t.h}h</div>
+                <T dim sm>{t.desc}</T>
+              </Card>
+            ))}
+          </div>
+        </Section>
+      </div>
+
+      {/* ─── FOR DESIGNERS ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(249,115,22,0.04), transparent)" }}>
+        <Section>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <SectionLabel>For Designers</SectionLabel>
+            <SectionH>Turn your talent into income.<br />On your terms.</SectionH>
+            <SectionP style={{ margin: "0 auto" }}>
+              No cold pitching. No client chasing. No unpaid quotes. Just open your dashboard, accept a gig, deliver great work, and get paid. Simple.
+            </SectionP>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 32 }}>
+            <FeatureCard icon="💸" title="75% Earnings" desc="You keep 75% of every gig. Weekly payouts straight to your bank account." />
+            <FeatureCard icon="🕐" title="Work When You Want" desc="Go online when you're available, go offline when you're not. No minimums, no schedules." />
+            <FeatureCard icon="📈" title="Build Your Rep" desc="Every delivery earns you ratings. Higher ratings = more gigs = more money." />
+            <FeatureCard icon="🎯" title="Matched to Your Skills" desc="Only see gigs that match your skillset. No wasted time on work you don't do." />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
+            {[
+              { v: "R12,000+", l: "Avg monthly earnings" },
+              { v: "15 min", l: "Avg time to first gig" },
+              { v: "247+", l: "Active designers" },
+              { v: "Weekly", l: "Payouts" },
+            ].map(s => (
+              <Card key={s.l} style={{ textAlign: "center", padding: 16 }}>
+                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: X.orange }}>{s.v}</div>
+                <T sm dim>{s.l}</T>
+              </Card>
+            ))}
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <Btn onClick={() => go("designer-register")} style={{ padding: "14px 32px", fontSize: 15 }}>Apply as a Designer →</Btn>
+            <T dim sm style={{ marginTop: 10 }}>Free to join · Takes 2 minutes · Start earning today</T>
+          </div>
+        </Section>
+      </div>
+
+      {/* ─── SERVICES & PRICING ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}` }}>
+        <Section>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <SectionLabel>Pricing</SectionLabel>
+            <SectionH>Transparent pricing. No surprises.</SectionH>
+            <SectionP style={{ margin: "0 auto" }}>20 services across 4 categories. All prices in ZAR, excl. VAT.</SectionP>
+          </div>
+          {Object.entries(SERVICES).map(([cat, items]) => (
+            <div key={cat} style={{ marginBottom: 6 }}>
+              <button onClick={() => setOpenCat(openCat === cat ? null : cat)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 16px", background: X.card, border: `1px solid ${X.border}`, borderRadius: openCat === cat ? "10px 10px 0 0" : 10, color: X.white, fontFamily: "Outfit", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                {cat}<span style={{ color: X.gray, fontSize: 16, transition: "transform 0.2s", transform: openCat === cat ? "rotate(180deg)" : "none" }}>▾</span>
+              </button>
+              {openCat === cat && (
+                <div style={{ border: `1px solid ${X.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "7px 16px", background: X.bg }}><T sm dim>Service</T><T sm dim style={{ textAlign: "right" }}>4h</T><T sm dim style={{ textAlign: "right" }}>12h</T><T sm dim style={{ textAlign: "right" }}>24h</T></div>
+                  {items.map((item, i) => (
+                    <div key={item.name} style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "9px 16px", background: i % 2 === 0 ? X.card : "transparent", borderTop: `1px solid ${X.border}` }}>
+                      <T style={{ color: X.white, fontSize: 13 }}>{item.name}</T>
+                      <T sm style={{ textAlign: "right", color: X.orangeLight }}>R{item.prices[4].toLocaleString()}</T>
+                      <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[12].toLocaleString()}</T>
+                      <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[24].toLocaleString()}</T>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
+        </Section>
+      </div>
+
+      {/* ─── FINAL CTA ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(249,115,22,0.06), transparent)" }}>
+        <Section style={{ textAlign: "center", paddingTop: 60, paddingBottom: 60 }}>
+          <SectionH>Ready to stop missing deadlines?</SectionH>
+          <SectionP style={{ margin: "0 auto 28px" }}>
+            Whether you need a logo by morning or a full brand pack by Friday — we've got a designer ready right now.
+          </SectionP>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <Btn onClick={() => go("customer-login")} style={{ padding: "14px 28px", fontSize: 15 }}>Submit a Gig →</Btn>
+            <Btn v="ghost" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15 }}>Join as Designer</Btn>
+          </div>
+        </Section>
+      </div>
+
+      {/* ─── FOOTER ─── */}
+      <div style={{ borderTop: `1px solid ${X.border}`, padding: "32px 20px", textAlign: "center" }}>
+        <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
+          <span style={{ color: X.orange }}>lastminute</span>.design
         </div>
+        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
+        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
+        <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
       </div>
     </div>
   );
