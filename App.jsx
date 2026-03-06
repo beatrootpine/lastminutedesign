@@ -730,352 +730,226 @@ const CreateGig = ({ onSubmit, onBack }) => {
   );
 };
 
-// ─── CUSTOMER PROFILE ───────────────────────────────────────────────────────
-const CustProfile = ({ customer, onUpdate }) => {
-  const [f, setF] = useState({ ...customer });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
 
-  const save = async () => {
-    setSaving(true);
-    const res = await api("update_customer_profile", { customer_id: customer.id, ...f });
-    if (res.customer) { onUpdate(res.customer); setSaved(true); setTimeout(() => setSaved(false), 2000); }
-    setSaving(false);
-  };
+// ─── SIDEBAR ICON ───────────────────────────────────────────────────────────
+const SideIcon = ({ icon, label, active, color = X.orange, onClick, badge }) => (
+  <button onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left", position: "relative", background: active ? (color + "15") : "transparent", color: active ? color : X.gray, transition: "all 0.15s" }}>
+    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
+    <span style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 13 }}>{label}</span>
+    {badge > 0 && <span style={{ position: "absolute", right: 12, background: color, color: X.bg, fontSize: 10, fontWeight: 800, fontFamily: "Outfit", padding: "1px 7px", borderRadius: 100 }}>{badge}</span>}
+  </button>
+);
 
-  return (
-    <div>
-      <H s={20} style={{ marginBottom: 16 }}>Business Details</H>
-      <T dim sm style={{ marginBottom: 20 }}>These details will be used on your design elements (letterheads, business cards, etc.)</T>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-        <Card style={{ padding: 16 }}>
-          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Personal</T>
-          <Field label="Full Name" value={f.name || ""} onChange={v => set("name", v)} placeholder="Your name" />
-          <Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" />
-        </Card>
-        <Card style={{ padding: 16 }}>
-          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Company</T>
-          <Field label="Company Name" value={f.company_name || ""} onChange={v => set("company_name", v)} placeholder="Your Company (Pty) Ltd" />
-          <Field label="Registration Number" value={f.registration_number || ""} onChange={v => set("registration_number", v)} placeholder="2024/000000/07" />
-          <Field label="Tagline / Slogan" value={f.tagline || ""} onChange={v => set("tagline", v)} placeholder="We make things happen" />
-        </Card>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 12 }}>
-        <Card style={{ padding: 16 }}>
-          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Contact Details</T>
-          <Field label="Company Email" value={f.company_email || ""} onChange={v => set("company_email", v)} placeholder="info@company.co.za" />
-          <Field label="Company Phone" value={f.company_phone || ""} onChange={v => set("company_phone", v)} placeholder="+27 11 000 0000" />
-          <Field label="Website" value={f.company_website || ""} onChange={v => set("company_website", v)} placeholder="www.company.co.za" />
-          <Field label="Physical Address" value={f.company_address || ""} onChange={v => set("company_address", v)} textarea placeholder="123 Main Road, Sandton, 2196" />
-        </Card>
-        <Card style={{ padding: 16 }}>
-          <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Brand & Social</T>
-          <Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="e.g. Navy #1B2A4A, Gold #D4AF37" />
-          <Field label="Facebook" value={f.social_facebook || ""} onChange={v => set("social_facebook", v)} placeholder="facebook.com/yourpage" />
-          <Field label="Instagram" value={f.social_instagram || ""} onChange={v => set("social_instagram", v)} placeholder="@yourhandle" />
-          <Field label="Twitter / X" value={f.social_twitter || ""} onChange={v => set("social_twitter", v)} placeholder="@yourhandle" />
-          <Field label="LinkedIn" value={f.social_linkedin || ""} onChange={v => set("social_linkedin", v)} placeholder="linkedin.com/company/yours" />
-        </Card>
-      </div>
-      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
-        <Btn onClick={save} disabled={saving}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Details"}</Btn>
-        <T sm dim>Your details auto-populate into design briefs</T>
-      </div>
-    </div>
-  );
-};
-
-// ─── CUSTOMER DASHBOARD ─────────────────────────────────────────────────────
-const CustDash = ({ customer, onCreateGig, onRate, onUpdateCustomer }) => {
-  const [tab, setTab] = useState("active");
-  const [gigs, setGigs] = useState([]);
-  const [designers, setDesigners] = useState([]);
-  const [ratings, setRatings] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    const res = await api("get_customer_gigs", { customer_id: customer.id }, "GET");
-    if (res.gigs) { setGigs(res.gigs); setDesigners(res.designers || []); setRatings(res.ratings || []); }
-    setLoading(false);
-  }, [customer.id]);
-
-  useEffect(() => { load(); const i = setInterval(load, 15000); return () => clearInterval(i); }, [load]);
-
-  const active = gigs.filter(g => g.status !== "completed");
-  const done = gigs.filter(g => g.status === "completed");
-  const totalSpent = gigs.reduce((s, g) => s + (g.price || 0), 0);
-
-  if (loading) return <Spinner text="Loading gigs..." />;
+// ─── COMMENT THREAD ─────────────────────────────────────────────────────────
+const CommentThread = ({ gigId, userId, userRole, userName }) => {
+  const [comments, setComments] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const load = useCallback(async () => { const r = await api("get_comments", { gig_id: gigId }, "GET"); if (r.comments) setComments(r.comments); }, [gigId]);
+  useEffect(() => { load(); const i = setInterval(load, 8000); return () => clearInterval(i); }, [load]);
+  const send = async () => { if (!msg.trim()) return; setSending(true); await api("add_comment", { gig_id: gigId, author_id: userId, author_role: userRole, author_name: userName, message: msg.trim() }); setMsg(""); await load(); setSending(false); };
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-        <div><H s={22}>Dashboard</H><T dim style={{ marginTop: 2 }}>Welcome back, {customer.name}</T></div>
-        <Btn onClick={onCreateGig}>+ New Gig</Btn>
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>
-        {[
-          { l: "Active", v: active.length, c: X.orange },
-          { l: "Completed", v: done.length, c: X.green },
-          { l: "Total Spent", v: `R${totalSpent.toLocaleString()}`, c: X.orangeLight },
-        ].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
-        {[
-          { k: "active", l: `Active (${active.length})` },
-          { k: "completed", l: `Completed (${done.length})` },
-          { k: "profile", l: "Business Profile" },
-        ].map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.orangeDim : "transparent", color: tab === t.k ? X.orange : X.gray }}>{t.l}</button>)}
-      </div>
-
-      {tab === "profile" && <CustProfile customer={customer} onUpdate={onUpdateCustomer} />}
-
-      {(tab === "active" || tab === "completed") && (
-        (tab === "active" ? active : done).length === 0 ? (
-          <Card style={{ textAlign: "center", padding: 36 }}><T dim>{tab === "active" ? "No active gigs" : "No completed gigs"}</T>{tab === "active" && <Btn sm onClick={onCreateGig} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {(tab === "active" ? active : done).map(g => <GigCard key={g.id} gig={g} designer={designers.find(d => d.id === g.designer_id)} rating={ratings.find(r => r.gig_id === g.id)} isCust onRate={onRate} userId={customer.id} />)}
-          </div>
-        )
-      )}
-    </div>
-  );
-};
-
-// ─── DESIGNER PROFILE ───────────────────────────────────────────────────────
-const DesProfile = ({ designer, onUpdate }) => {
-  const [f, setF] = useState({ ...designer });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
-
-  const save = async () => {
-    setSaving(true);
-    const res = await api("update_designer_profile", { designer_id: designer.id, ...f });
-    if (res.designer) { onUpdate(res.designer); setSaved(true); setTimeout(() => setSaved(false), 2000); }
-    setSaving(false);
-  };
-
-  const completeness = [f.phone, f.id_number, f.address, f.bank_name, f.bank_account].filter(Boolean).length;
-  const pct = Math.round((completeness / 5) * 100);
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <H s={20}>My Profile</H>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 80, height: 6, background: X.bg, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? X.green : X.teal, borderRadius: 3 }} />
-          </div>
-          <T sm style={{ color: pct === 100 ? X.green : X.teal }}>{pct}%</T>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}>
-          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Personal Details</T>
-          <Field label="Full Name" value={f.name || ""} onChange={v => set("name", v)} placeholder="Your name" />
-          <Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" />
-          <Field label="ID Number" value={f.id_number || ""} onChange={v => set("id_number", v)} placeholder="Your SA ID number" />
-          <Field label="City" value={f.city || ""} onChange={v => set("city", v)} placeholder="Johannesburg" />
-          <Field label="Address" value={f.address || ""} onChange={v => set("address", v)} textarea placeholder="Full residential address" />
-        </Card>
-        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}>
-          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Banking Details</T>
-          <T dim sm style={{ marginBottom: 12 }}>Required for weekly payouts</T>
-          <Field label="Bank Name" value={f.bank_name || ""} onChange={v => set("bank_name", v)} placeholder="e.g. FNB, Capitec, Standard Bank" />
-          <Field label="Account Number" value={f.bank_account || ""} onChange={v => set("bank_account", v)} placeholder="Your account number" />
-          <Field label="Branch Code" value={f.bank_branch || ""} onChange={v => set("bank_branch", v)} placeholder="e.g. 250655" />
-        </Card>
-      </div>
-
-      <Card style={{ padding: 16, marginTop: 12, borderTop: `2px solid ${X.teal}` }}>
-        <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Document Uploads</T>
-        <T dim sm style={{ marginBottom: 12 }}>Upload the following for account verification. These are kept private and secure.</T>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          {[
-            { key: "id_document_path", label: "ID Document", icon: "🪪", desc: "SA ID or Passport copy" },
-            { key: "address_proof_path", label: "Proof of Address", icon: "📬", desc: "Utility bill or bank statement" },
-            { key: "bank_proof_path", label: "Banking Confirmation", icon: "🏦", desc: "Bank confirmation letter" },
-          ].map(doc => (
-            <div key={doc.key} style={{ padding: 14, background: X.bg, borderRadius: 8, border: `1px solid ${f[doc.key] ? X.green + "40" : X.border}`, textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 6 }}>{doc.icon}</div>
-              <T sm style={{ color: X.white, fontWeight: 600 }}>{doc.label}</T>
-              <T sm dim style={{ marginBottom: 8 }}>{doc.desc}</T>
-              {f[doc.key] ? (
-                <Pill color={X.green}>Uploaded ✓</Pill>
-              ) : (
-                <label style={{ cursor: "pointer", display: "inline-block", padding: "5px 12px", borderRadius: 6, background: X.tealDim, color: X.teal, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${X.tealBorder}` }}>
-                  Upload
-                  <input type="file" onChange={(e) => { if (e.target.files[0]) set(doc.key, `uploaded_${Date.now()}`); }} style={{ display: "none" }} />
-                </label>
-              )}
+      <div style={{ maxHeight: 300, overflowY: "auto", marginBottom: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+        {comments.length === 0 && <T dim sm style={{ textAlign: "center", padding: 16 }}>No messages yet</T>}
+        {comments.map(c => {
+          const isMe = c.author_id === userId;
+          return (
+            <div key={c.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+              <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: 10, background: isMe ? (userRole === "designer" ? X.tealDim : X.orangeDim) : X.bg, border: `1px solid ${isMe ? (userRole === "designer" ? X.tealBorder : X.orangeBorder) : X.border}` }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 2 }}><T sm style={{ color: c.author_role === "designer" ? X.teal : X.orange, fontWeight: 600 }}>{c.author_name}</T><T sm dim>{new Date(c.created_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</T></div>
+                <T sm style={{ color: X.white }}>{c.message}</T>
+              </div>
             </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card style={{ padding: 16, marginTop: 12 }}>
-        <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Bio & Skills</T>
-        <Field label="Bio" value={f.bio || ""} onChange={v => set("bio", v)} textarea placeholder="What makes your work stand out..." />
-      </Card>
-
-      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
-        <Btn onClick={save} disabled={saving} style={{ background: X.teal, color: X.bg }}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Profile"}</Btn>
-        {pct < 100 && <T sm style={{ color: X.yellow }}>Complete your profile to receive payouts</T>}
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Type a message..." style={{ flex: 1, background: X.bg, border: `1px solid ${X.border}`, borderRadius: 8, padding: "8px 12px", color: X.white, fontFamily: "Inter", fontSize: 13, outline: "none" }} />
+        <Btn sm onClick={send} disabled={sending || !msg.trim()} style={{ background: userRole === "designer" ? X.teal : X.orange, color: X.bg }}>Send</Btn>
       </div>
     </div>
   );
 };
 
-// ─── DESIGNER EARNINGS ──────────────────────────────────────────────────────
+// ─── PROJECT VIEW ───────────────────────────────────────────────────────────
+const ProjectView = ({ gig, designer, rating, isCust, userId, userName, onBack, onRate, onDeliver, onAccept }) => {
+  const pct = gig.status === "in_progress" && gig.deadline ? Math.min(100, Math.max(0, Math.round(((Date.now() - new Date(gig.created_at).getTime()) / (new Date(gig.deadline).getTime() - new Date(gig.created_at).getTime())) * 100))) : 0;
+  const hrs = gig.deadline ? Math.max(0, ((new Date(gig.deadline).getTime() - Date.now()) / 3600000).toFixed(1)) : 0;
+  const sc = { pending: X.yellow, in_progress: isCust ? X.orange : X.teal, delivered: X.green, completed: X.green }[gig.status] || X.gray;
+
+  return (
+    <div>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back to Projects</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ display: "flex", gap: 5, marginBottom: 6, flexWrap: "wrap" }}><Pill color={sc}>{gig.status.replace("_", " ")}</Pill><Pill color={gig.turnaround === 4 ? X.red : gig.turnaround === 12 ? X.yellow : X.green}>{TIERS[gig.turnaround]?.tag}</Pill><Pill color={X.green}>PAID</Pill></div>
+          <H s={22}>{gig.service}</H>
+        </div>
+        <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 24, color: isCust ? X.orange : X.teal }}>R{gig.price?.toLocaleString()}</div>
+      </div>
+      {gig.brief && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 4 }}>BRIEF</T><T style={{ color: X.white }}>{gig.brief}</T></Card>}
+      {gig.status === "in_progress" && <Card style={{ marginBottom: 16, padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><T sm style={{ color: X.gray, fontWeight: 600 }}>PROGRESS</T><T sm style={{ color: hrs < 1 ? X.red : X.grayLight }}>{hrs}h remaining</T></div><Bar pct={pct} /><T dim sm style={{ marginTop: 6 }}>Deadline: {new Date(gig.deadline).toLocaleString("en-ZA")}</T></Card>}
+      {designer && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 8 }}>DESIGNER</T><div style={{ display: "flex", alignItems: "center", gap: 12 }}><div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${X.teal}, ${X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.bg }}>{designer.avatar_initials || "?"}</div><div style={{ flex: 1 }}><T style={{ color: X.white, fontWeight: 600 }}>{designer.name}</T><div style={{ display: "flex", alignItems: "center", gap: 4 }}><Stars n={designer.rating} s={12} /><T sm dim>{designer.rating || "New"}</T></div></div>{isCust && gig.status === "delivered" && !rating && <Btn sm onClick={() => onRate(gig.id)}>Accept & Rate</Btn>}{!isCust && gig.status === "in_progress" && <Btn sm onClick={() => onDeliver(gig.id)} style={{ background: X.teal, color: X.bg }}>Mark Delivered</Btn>}</div></Card>}
+      {!isCust && gig.status === "pending" && <Card style={{ marginBottom: 16, padding: 16, textAlign: "center" }}><Btn onClick={() => onAccept(gig.id, gig.turnaround)} style={{ background: X.teal, color: X.bg }}>Accept This Gig</Btn></Card>}
+      {rating && <Card style={{ marginBottom: 16, padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 6 }}>RATING</T><div style={{ display: "flex", alignItems: "center", gap: 6 }}><Stars n={rating.score} s={16} /><T style={{ color: X.white }}>{rating.score}/5</T></div>{rating.feedback && <T dim style={{ marginTop: 4 }}>{rating.feedback}</T>}</Card>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        {gig.status !== "pending" && <Card style={{ padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 10 }}>FILES</T><GigFiles gigId={gig.id} role={isCust ? "customer" : "designer"} userId={userId} /></Card>}
+        {gig.status !== "pending" && <Card style={{ padding: 16 }}><T sm style={{ color: X.gray, fontWeight: 600, marginBottom: 10 }}>MESSAGES</T><CommentThread gigId={gig.id} userId={userId} userRole={isCust ? "customer" : "designer"} userName={userName} /></Card>}
+      </div>
+    </div>
+  );
+};
+
+// ─── SUPPORT ────────────────────────────────────────────────────────────────
+const SupportPage = ({ userId, userRole, userName, userEmail, accent }) => {
+  const [tickets, setTickets] = useState([]);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { (async () => { const r = await api("get_support_tickets", { user_id: userId }, "GET"); if (r.tickets) setTickets(r.tickets); })(); }, [userId, sent]);
+  const send = async () => { if (!message.trim()) return; setSending(true); await api("send_support", { user_id: userId, user_role: userRole, user_name: userName, user_email: userEmail, subject, message }); setSubject(""); setMessage(""); setSent(true); setSending(false); setTimeout(() => setSent(false), 3000); };
+
+  return (
+    <div>
+      <H s={20} style={{ marginBottom: 16 }}>Support</H>
+      <Card style={{ padding: 16, marginBottom: 16 }}><T sm style={{ color: accent, fontWeight: 600, marginBottom: 10 }}>New Message</T><Field label="Subject" value={subject} onChange={setSubject} placeholder="What do you need help with?" /><Field label="Message" value={message} onChange={setMessage} textarea placeholder="Describe your issue..." /><Btn onClick={send} disabled={sending || !message.trim()} style={{ background: accent, color: X.bg }}>{sent ? "✓ Sent!" : sending ? "Sending..." : "Send Message"}</Btn></Card>
+      {tickets.length > 0 && <Card style={{ padding: 16 }}><T sm style={{ color: accent, fontWeight: 600, marginBottom: 10 }}>Previous ({tickets.length})</T>{tickets.map(t => <div key={t.id} style={{ padding: "10px 0", borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><T sm style={{ color: X.white, fontWeight: 600 }}>{t.subject || "General"}</T><Pill color={t.status === "open" ? X.yellow : X.green}>{t.status}</Pill></div><T sm dim>{t.message.slice(0, 100)}</T><T sm dim style={{ marginTop: 2 }}>{new Date(t.created_at).toLocaleDateString("en-ZA")}</T></div>)}</Card>}
+    </div>
+  );
+};
+
+// ─── PROFILES ───────────────────────────────────────────────────────────────
+const CustProfile = ({ customer, onUpdate }) => {
+  const [f, setF] = useState({ ...customer }); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const save = async () => { setSaving(true); const r = await api("update_customer_profile", { customer_id: customer.id, ...f }); if (r.customer) { onUpdate(r.customer); setSaved(true); setTimeout(() => setSaved(false), 2000); } setSaving(false); };
+  return (
+    <div>
+      <H s={20} style={{ marginBottom: 4 }}>Business Details</H><T dim sm style={{ marginBottom: 20 }}>Auto-populates into design briefs</T>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Personal</T><Field label="Name" value={f.name || ""} onChange={v => set("name", v)} /><Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" /></Card>
+        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Company</T><Field label="Company Name" value={f.company_name || ""} onChange={v => set("company_name", v)} /><Field label="Reg Number" value={f.registration_number || ""} onChange={v => set("registration_number", v)} /><Field label="Tagline" value={f.tagline || ""} onChange={v => set("tagline", v)} /></Card>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 12 }}>
+        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Contact</T><Field label="Email" value={f.company_email || ""} onChange={v => set("company_email", v)} /><Field label="Phone" value={f.company_phone || ""} onChange={v => set("company_phone", v)} /><Field label="Website" value={f.company_website || ""} onChange={v => set("company_website", v)} /><Field label="Address" value={f.company_address || ""} onChange={v => set("company_address", v)} textarea /></Card>
+        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Brand & Social</T><Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="#1B2A4A, #D4AF37" /><Field label="Instagram" value={f.social_instagram || ""} onChange={v => set("social_instagram", v)} /><Field label="Facebook" value={f.social_facebook || ""} onChange={v => set("social_facebook", v)} /><Field label="LinkedIn" value={f.social_linkedin || ""} onChange={v => set("social_linkedin", v)} /></Card>
+      </div>
+      <Btn onClick={save} disabled={saving} style={{ marginTop: 16 }}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Details"}</Btn>
+    </div>
+  );
+};
+
+const DesProfile = ({ designer, onUpdate }) => {
+  const [f, setF] = useState({ ...designer }); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const save = async () => { setSaving(true); const r = await api("update_designer_profile", { designer_id: designer.id, ...f }); if (r.designer) { onUpdate(r.designer); setSaved(true); setTimeout(() => setSaved(false), 2000); } setSaving(false); };
+  const pct = Math.round(([f.phone, f.id_number, f.address, f.bank_name, f.bank_account].filter(Boolean).length / 5) * 100);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>My Profile</H><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 80, height: 6, background: X.bg, borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? X.green : X.teal, borderRadius: 3 }} /></div><T sm style={{ color: pct === 100 ? X.green : X.teal }}>{pct}%</T></div></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}><T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Personal</T><Field label="Name" value={f.name || ""} onChange={v => set("name", v)} /><Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} /><Field label="ID Number" value={f.id_number || ""} onChange={v => set("id_number", v)} /><Field label="City" value={f.city || ""} onChange={v => set("city", v)} /><Field label="Address" value={f.address || ""} onChange={v => set("address", v)} textarea /></Card>
+        <Card style={{ padding: 16, borderTop: `2px solid ${X.teal}` }}><T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Banking</T><Field label="Bank" value={f.bank_name || ""} onChange={v => set("bank_name", v)} /><Field label="Account" value={f.bank_account || ""} onChange={v => set("bank_account", v)} /><Field label="Branch" value={f.bank_branch || ""} onChange={v => set("bank_branch", v)} /></Card>
+      </div>
+      <Card style={{ padding: 16, marginTop: 12, borderTop: `2px solid ${X.teal}` }}><T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Documents</T><div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>{[{ k: "id_document_path", l: "ID", i: "🪪" }, { k: "address_proof_path", l: "Address Proof", i: "📬" }, { k: "bank_proof_path", l: "Bank Confirm", i: "🏦" }].map(d => <div key={d.k} style={{ padding: 12, background: X.bg, borderRadius: 8, border: `1px solid ${f[d.k] ? X.green + "40" : X.border}`, textAlign: "center" }}><div style={{ fontSize: 22, marginBottom: 4 }}>{d.i}</div><T sm style={{ color: X.white, fontWeight: 600, marginBottom: 6 }}>{d.l}</T>{f[d.k] ? <Pill color={X.green}>✓</Pill> : <label style={{ cursor: "pointer", padding: "3px 8px", borderRadius: 6, background: X.tealDim, color: X.teal, fontSize: 10, fontFamily: "Outfit", fontWeight: 600 }}>Upload<input type="file" onChange={() => set(d.k, `up_${Date.now()}`)} style={{ display: "none" }} /></label>}</div>)}</div></Card>
+      <Card style={{ padding: 16, marginTop: 12 }}><Field label="Bio" value={f.bio || ""} onChange={v => set("bio", v)} textarea /></Card>
+      <div style={{ marginTop: 16, display: "flex", gap: 10 }}><Btn onClick={save} disabled={saving} style={{ background: X.teal, color: X.bg }}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Profile"}</Btn>{pct < 100 && <T sm style={{ color: X.yellow, alignSelf: "center" }}>Complete for payouts</T>}</div>
+    </div>
+  );
+};
+
 const DesEarnings = ({ designer }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const res = await api("get_designer_earnings", { designer_id: designer.id }, "GET");
-      if (!res.error) setData(res);
-      setLoading(false);
-    })();
-  }, [designer.id]);
-
-  if (loading) return <Spinner text="Loading earnings..." />;
-  if (!data) return <Card style={{ padding: 24, textAlign: "center" }}><T dim>Could not load earnings</T></Card>;
-
+  const [d, setD] = useState(null); const [l, setL] = useState(true);
+  useEffect(() => { (async () => { const r = await api("get_designer_earnings", { designer_id: designer.id }, "GET"); if (!r.error) setD(r); setL(false); })(); }, [designer.id]);
+  if (l) return <Spinner text="Loading earnings..." />;
+  if (!d) return <Card style={{ padding: 24, textAlign: "center" }}><T dim>Could not load</T></Card>;
   return (
     <div>
       <H s={20} style={{ marginBottom: 16 }}>Earnings</H>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 20 }}>
-        {[
-          { l: "This Week", v: `R${data.thisWeek.toLocaleString()}`, c: X.teal },
-          { l: "This Month", v: `R${data.thisMonth.toLocaleString()}`, c: X.tealLight },
-          { l: "All Time", v: `R${data.total.toLocaleString()}`, c: X.green },
-          { l: "Gigs Done", v: data.gigCount, c: X.grayLight },
-        ].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 14 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
-      </div>
-
-      {data.gigs && data.gigs.length > 0 && (
-        <Card style={{ padding: 16 }}>
-          <T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Recent Earnings</T>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {data.gigs.slice(0, 10).map(g => (
-              <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${X.border}` }}>
-                <div>
-                  <T sm style={{ color: X.white }}>{g.service}</T>
-                  <T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <T sm style={{ color: X.teal, fontWeight: 700 }}>R{Math.round((g.price || 0) * 0.75).toLocaleString()}</T>
-                  <T sm dim>of R{g.price?.toLocaleString()}</T>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "This Week", v: `R${d.thisWeek.toLocaleString()}`, c: X.teal }, { l: "This Month", v: `R${d.thisMonth.toLocaleString()}`, c: X.tealLight }, { l: "All Time", v: `R${d.total.toLocaleString()}`, c: X.green }, { l: "Gigs", v: d.gigCount, c: X.grayLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
+      {d.gigs?.length > 0 && <Card style={{ padding: 16 }}><T sm style={{ color: X.teal, fontWeight: 600, marginBottom: 10 }}>Recent</T>{d.gigs.slice(0, 10).map(g => <div key={g.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${X.border}` }}><div><T sm style={{ color: X.white }}>{g.service}</T><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T></div><T sm style={{ color: X.teal, fontWeight: 700 }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</T></div>)}</Card>}
     </div>
   );
 };
 
-// ─── DESIGNER DASHBOARD ─────────────────────────────────────────────────────
-const DesDash = ({ designer, onAccept, onDeliver, onUpdateDesigner }) => {
-  const [tab, setTab] = useState("available");
-  const [avail, setAvail] = useState([]);
-  const [myGigs, setMyGigs] = useState([]);
-  const [ratings, setRatings] = useState([]);
-  const [loading, setLoading] = useState(true);
+// ─── SIDEBAR DASHBOARD ──────────────────────────────────────────────────────
+const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, onUpdateProfile, rateGig, rateSubmit, setRateGig }) => {
+  const [section, setSection] = useState("projects");
+  const [gigs, setGigs] = useState([]); const [availGigs, setAvailGigs] = useState([]); const [designers, setDesigners] = useState([]); const [ratings, setRatings] = useState([]);
+  const [loading, setLoading] = useState(true); const [selectedGig, setSelectedGig] = useState(null); const [showCreate, setShowCreate] = useState(false); const [sideOpen, setSideOpen] = useState(true);
+
+  const isCust = role === "customer"; const accent = isCust ? X.orange : X.teal;
 
   const load = useCallback(async () => {
-    const [availRes, myRes] = await Promise.all([
-      api("get_available_gigs", {}, "GET"),
-      api("get_designer_gigs", { designer_id: designer.id }, "GET"),
-    ]);
-    if (availRes.gigs) setAvail(availRes.gigs);
-    if (myRes.gigs) setMyGigs(myRes.gigs);
-    if (myRes.ratings) setRatings(myRes.ratings);
+    if (isCust) { const r = await api("get_customer_gigs", { customer_id: profile.id }, "GET"); if (r.gigs) { setGigs(r.gigs); setDesigners(r.designers||[]); setRatings(r.ratings||[]); } }
+    else { const [a, m] = await Promise.all([api("get_available_gigs", {}, "GET"), api("get_designer_gigs", { designer_id: profile.id }, "GET")]); if (a.gigs) setAvailGigs(a.gigs); if (m.gigs) { setGigs(m.gigs); setRatings(m.ratings||[]); } }
     setLoading(false);
-  }, [designer.id]);
+  }, [profile.id, isCust]);
 
-  useEffect(() => { load(); const i = setInterval(load, 10000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); const i = setInterval(load, 12000); return () => clearInterval(i); }, [load]);
 
-  const active = myGigs.filter(g => g.status === "in_progress");
-  const done = myGigs.filter(g => g.status === "completed" || g.status === "delivered");
-  const earned = done.reduce((s, g) => s + (g.price || 0) * 0.75, 0);
+  const active = gigs.filter(g => g.status === "in_progress"); const delivered = gigs.filter(g => g.status === "delivered"); const completed = gigs.filter(g => g.status === "completed");
+  const earned = gigs.filter(g => g.status === "completed" || g.status === "delivered").reduce((s, g) => s + (g.price||0) * (isCust ? 1 : 0.75), 0);
 
-  const tabs = [{ k: "available", l: `Available (${avail.length})` }, { k: "active", l: `Active (${active.length})` }, { k: "done", l: `Done (${done.length})` }, { k: "earnings", l: "Earnings" }, { k: "profile", l: "Profile" }];
-  const list = tab === "available" ? avail : tab === "active" ? active : done;
-
-  if (loading) return <Spinner text="Loading dashboard..." />;
+  const sideItems = isCust ? [
+    { icon: "📋", label: "Projects", key: "projects", badge: active.length + delivered.length },
+    { icon: "🏢", label: "Business Profile", key: "profile" },
+    { icon: "💬", label: "Support", key: "support" },
+  ] : [
+    { icon: "🔥", label: "Available", key: "available", badge: availGigs.length },
+    { icon: "📋", label: "My Gigs", key: "projects", badge: active.length },
+    { icon: "💰", label: "Earnings", key: "earnings" },
+    { icon: "👤", label: "Profile", key: "profile" },
+    { icon: "💬", label: "Support", key: "support" },
+  ];
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${X.teal}, ${X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 17, color: X.bg, position: "relative" }}>
-          {designer.avatar_initials || "?"}
-          {designer.is_online && <span style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: X.green, border: `2px solid ${X.card}` }} />}
+    <div style={{ display: "flex", minHeight: "100vh", background: X.bg }}>
+      {/* Sidebar */}
+      <div style={{ width: sideOpen ? 220 : 0, flexShrink: 0, background: X.card, borderRight: `1px solid ${X.border}`, transition: "width 0.2s", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "16px 14px", borderBottom: `1px solid ${X.border}` }}><span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.white }}><span style={{ color: accent }}>lastminute</span>.design</span></div>
+        <div style={{ padding: 14, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${accent}, ${isCust ? X.orangeLight : X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 12, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</T><Pill color={accent}>{role}</Pill></div></div></div>
+        <div style={{ padding: "8px 6px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={accent} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
+        {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => { setShowCreate(true); setSelectedGig(null); }}>+ New Gig</Btn></div>}
+        <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer", padding: "6px 0" }}>Sign out</button></div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "rgba(9,9,11,0.95)", backdropFilter: "blur(10px)", zIndex: 50 }}>
+          <button onClick={() => setSideOpen(!sideOpen)} style={{ background: "none", border: "none", color: X.gray, fontSize: 18, cursor: "pointer" }}>☰</button>
+          {!isCust && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: profile.is_online ? X.green : X.gray }} /><T sm dim>{profile.is_online ? "Online" : "Offline"}</T></div>}
         </div>
-        <div style={{ flex: 1 }}><H s={18}>{designer.name}</H><div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><Stars n={designer.rating || 0} s={13} /><T sm dim>{designer.rating || "New"} · {designer.total_reviews || 0} reviews</T></div></div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
-        {[{ l: "Completed", v: designer.completed_gigs || 0 }, { l: "Rating", v: (designer.rating || 0) + "★" }, { l: "Earned", v: `R${Math.round(earned).toLocaleString()}` }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.teal }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
-      </div>
-      <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
-        {tabs.map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.tealDim : "transparent", color: tab === t.k ? X.teal : X.gray }}>{t.l}</button>)}
-      </div>
+        <div style={{ padding: "24px 20px", maxWidth: 860, margin: "0 auto" }}>
+          {loading && <Spinner />}
+          {rateGig && <RateModal gigId={rateGig.id} designerId={rateGig.designer_id} onDone={rateSubmit} onClose={() => setRateGig(null)} />}
 
-      {tab === "earnings" && <DesEarnings designer={designer} />}
-      {tab === "profile" && <DesProfile designer={designer} onUpdate={onUpdateDesigner} />}
+          {!loading && showCreate && <CreateGig onSubmit={(data) => { createGig(data); setShowCreate(false); }} onBack={() => setShowCreate(false)} />}
 
-      {(tab === "available" || tab === "active" || tab === "done") && (
-        list.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>Nothing here yet</T></Card> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {list.map(g => <GigCard key={g.id} gig={g} onAccept={onAccept} onDeliver={onDeliver} userId={designer.id} />)}
-          </div>
-        )
-      )}
-    </div>
-  );
-};
+          {!loading && !showCreate && selectedGig && <ProjectView gig={selectedGig} designer={designers.find(d => d.id === selectedGig.designer_id)} rating={ratings.find(r => r.gig_id === selectedGig.id)} isCust={isCust} userId={profile.id} userName={profile.name} onBack={() => setSelectedGig(null)} onRate={(id) => setRateGig({ id, designer_id: selectedGig.designer_id, service: selectedGig.service })} onDeliver={deliverGig} onAccept={acceptGig} />}
 
-// ─── DESIGNER REGISTER FORM ─────────────────────────────────────────────────
-const DesRegForm = ({ go, onReg }) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState([]);
-  const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
-
-  return (
-    <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ maxWidth: 460, width: "100%" }}>
-        <Nav go={go} minimal />
-        <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}>
-          <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4, margin: "0 auto 16px" }}>← Back</button>
-          <Pill color={X.teal}>Designer</Pill>
-          <H s={22} style={{ marginTop: 8 }}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
-        <Card style={{ borderTop: `2px solid ${X.teal}` }}>
-          <Field label="Full Name" value={name} onChange={setName} placeholder="Thando Mokoena" />
-          <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
-          <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
-          <Field label="Short Bio" value={bio} onChange={setBio} textarea placeholder="What makes your work stand out..." />
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.tealDim : X.bg, color: skills.includes(s.name) ? X.teal : X.gray, border: `1px solid ${skills.includes(s.name) ? X.tealBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
+          {!loading && !showCreate && !selectedGig && section === "projects" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => setShowCreate(true)}>+ New Gig</Btn>}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
+              {gigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No projects yet</T>{isCust && <Btn sm onClick={() => setShowCreate(true)} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card> : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right" }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T></div></div></Card>)}</div>
+              )}
             </div>
-          </div>
-          <Btn full onClick={() => { if (name && email && skills.length) onReg({ name, email, city, bio, skills }); }} disabled={!name || !email || !skills.length} style={{ background: X.teal, color: X.bg }}>Apply Now →</Btn>
-          <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => go("designer-login")} style={{ background: "none", border: "none", color: X.teal, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Already registered? Sign in →</button></div>
-        </Card>
+          )}
+
+          {!loading && !showCreate && !selectedGig && section === "available" && !isCust && (
+            <div><H s={20} style={{ marginBottom: 16 }}>Available Gigs</H>{availGigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No gigs right now</T></Card> : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{availGigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={X.yellow}>New</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T></div><div style={{ textAlign: "right" }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.teal }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</div><T sm dim>your earnings</T></div></div></Card>)}</div>}</div>
+          )}
+
+          {!loading && !showCreate && !selectedGig && section === "profile" && isCust && <CustProfile customer={profile} onUpdate={onUpdateProfile} />}
+          {!loading && !showCreate && !selectedGig && section === "profile" && !isCust && <DesProfile designer={profile} onUpdate={onUpdateProfile} />}
+          {!loading && !showCreate && !selectedGig && section === "earnings" && !isCust && <DesEarnings designer={profile} />}
+          {!loading && !showCreate && !selectedGig && section === "support" && <SupportPage userId={profile.id} userRole={role} userName={profile.name} userEmail={profile.email} accent={accent} />}
+        </div>
       </div>
     </div>
   );
@@ -1083,15 +957,12 @@ const DesRegForm = ({ go, onReg }) => {
 
 // ─── RATING MODAL ───────────────────────────────────────────────────────────
 const RateModal = ({ gigId, designerId, onDone, onClose }) => {
-  const [r, setR] = useState(5);
-  const [fb, setFb] = useState("");
+  const [r, setR] = useState(5); const [fb, setFb] = useState("");
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <Card onClick={e => e.stopPropagation()} style={{ maxWidth: 360, width: "100%", padding: 24 }}>
         <div style={{ textAlign: "center", marginBottom: 16 }}><H s={17}>Rate this designer</H></div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 16 }}>
-          {[1,2,3,4,5].map(s => <button key={s} onClick={() => setR(s)} style={{ background: "none", border: "none", fontSize: 26, cursor: "pointer", color: s <= r ? X.orange : "#27272a" }}>★</button>)}
-        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 16 }}>{[1,2,3,4,5].map(s => <button key={s} onClick={() => setR(s)} style={{ background: "none", border: "none", fontSize: 26, cursor: "pointer", color: s <= r ? X.orange : "#27272a" }}>★</button>)}</div>
         <Field label="Feedback" value={fb} onChange={setFb} textarea placeholder="How was it?" />
         <div style={{ display: "flex", gap: 6 }}><Btn v="ghost" full onClick={onClose}>Cancel</Btn><Btn full onClick={() => onDone(r, fb)}>Submit</Btn></div>
       </Card>
@@ -1099,122 +970,37 @@ const RateModal = ({ gigId, designerId, onDone, onClose }) => {
   );
 };
 
-// ─── AUTH API HELPER ────────────────────────────────────────────────────────
-const auth = async (action, data) => {
-  try {
-    const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...data }) });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || "Auth error");
-    return j;
-  } catch (e) { return { error: e.message }; }
-};
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+const auth = async (a, d) => { try { const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: a, ...d }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); return j; } catch (e) { return { error: e.message }; } };
+const pay = async (a, d) => { try { const r = await fetch("/api/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: a, ...d }) }); return r.json(); } catch (e) { return { error: e.message }; } };
 
-const pay = async (action, data) => {
-  try {
-    const r = await fetch("/api/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...data }) });
-    return r.json();
-  } catch (e) { return { error: e.message }; }
-};
-
-// ─── AUTH SCREENS ───────────────────────────────────────────────────────────
-const AuthScreen = ({ go, onAuth, mode: initMode, role: initRole }) => {
-  const [mode, setMode] = useState(initMode || "login"); // login or signup
-  const [role, setRole] = useState(initRole || "customer"); // customer or designer
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
+  const [mode, setMode] = useState(im||"login"); const [role, setRole] = useState(ir||"customer"); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [name, setName] = useState(""); const [city, setCity] = useState(""); const [bio, setBio] = useState(""); const [skills, setSkills] = useState([]); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
   const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
-
-  const handleSubmit = async () => {
-    setError("");
-    setLoading(true);
+  const iDS = mode === "signup" && role === "designer";
+  const submit = async () => {
+    setError(""); setLoading(true);
     try {
-      if (mode === "signup") {
-        if (role === "customer") {
-          const res = await auth("signup_customer", { email, password, name });
-          if (res.error) throw new Error(res.error);
-          if (res.customer) onAuth("customer", res.customer, res.session);
-        } else {
-          if (!skills.length) throw new Error("Select at least one skill");
-          const res = await auth("signup_designer", { email, password, name, city, bio, skills });
-          if (res.error) throw new Error(res.error);
-          if (res.designer) {
-            onAuth("designer", res.designer, res.session);
-            sendEmail("designer_welcome", { designerEmail: email, designerName: name });
-          }
-        }
-      } else {
-        const res = await auth("login", { email, password });
-        if (res.error) throw new Error(res.error);
-        if (res.profile) onAuth(res.role, res.profile, res.session);
-        else throw new Error("Account not found");
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-    setLoading(false);
+      if (mode === "signup") { if (role === "customer") { const r = await auth("signup_customer", { email, password, name }); if (r.error) throw new Error(r.error); if (r.customer) onAuth("customer", r.customer); } else { if (!skills.length) throw new Error("Select skills"); const r = await auth("signup_designer", { email, password, name, city, bio, skills }); if (r.error) throw new Error(r.error); if (r.designer) { onAuth("designer", r.designer); sendEmail("designer_welcome", { designerEmail: email, designerName: name }); } } }
+      else { const r = await auth("login", { email, password }); if (r.error) throw new Error(r.error); if (r.profile) onAuth(r.role, r.profile); else throw new Error("Account not found"); }
+    } catch (e) { setError(e.message); } setLoading(false);
   };
-
-  const isDesignerSignup = mode === "signup" && role === "designer";
-
   return (
     <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ maxWidth: isDesignerSignup ? 460 : 360, width: "100%" }}>
+      <div style={{ maxWidth: iDS ? 460 : 360, width: "100%" }}>
         <Nav go={go} minimal />
         <div style={{ paddingTop: 80 }}>
           <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back</button>
-
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <H s={22}>{mode === "login" ? "Welcome back" : role === "designer" ? "Join as a Designer" : "Create an account"}</H>
-            <T dim style={{ marginTop: 4 }}>{mode === "login" ? "Sign in to your account" : role === "designer" ? "Start earning today" : "Get your first design delivered fast"}</T>
-          </div>
-
-          {/* Role toggle for signup */}
-          {mode === "signup" && (
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: X.card, borderRadius: 8, padding: 4, border: `1px solid ${X.border}` }}>
-              {["customer", "designer"].map(r => (
-                <button key={r} onClick={() => setRole(r)} style={{
-                  flex: 1, padding: "8px", borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer",
-                  background: role === r ? (r === "designer" ? X.teal : X.orange) : "transparent", color: role === r ? X.bg : X.gray, textTransform: "capitalize",
-                }}>{r === "customer" ? "I need design" : "I'm a designer"}</button>
-              ))}
-            </div>
-          )}
-
+          <div style={{ textAlign: "center", marginBottom: 20 }}><H s={22}>{mode === "login" ? "Welcome back" : role === "designer" ? "Join as Designer" : "Create account"}</H></div>
+          {mode === "signup" && <div style={{ display: "flex", gap: 4, marginBottom: 16, background: X.card, borderRadius: 8, padding: 4, border: `1px solid ${X.border}` }}>{["customer","designer"].map(r => <button key={r} onClick={() => setRole(r)} style={{ flex: 1, padding: 8, borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer", background: role===r?(r==="designer"?X.teal:X.orange):"transparent", color: role===r?X.bg:X.gray }}>{r==="customer"?"I need design":"I'm a designer"}</button>)}</div>}
           <Card>
-            {error && <div style={{ padding: "8px 12px", marginBottom: 12, borderRadius: 6, background: X.red + "18", border: `1px solid ${X.red}30`, color: X.red, fontSize: 12, fontFamily: "Inter" }}>{error}</div>}
-
-            {mode === "signup" && <Field label="Full Name" value={name} onChange={setName} placeholder="Your name" />}
+            {error && <div style={{ padding: "8px 12px", marginBottom: 12, borderRadius: 6, background: X.red+"18", border: `1px solid ${X.red}30`, color: X.red, fontSize: 12 }}>{error}</div>}
+            {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" />}
             <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
-            <Field label="Password" value={password} onChange={setPassword} type="password" placeholder={mode === "signup" ? "Create a password (min 6 chars)" : "Your password"} />
-
-            {isDesignerSignup && (
-              <>
-                <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
-                <Field label="Short Bio" value={bio} onChange={setBio} textarea placeholder="What makes your work stand out..." />
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                    {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.tealDim : X.bg, color: skills.includes(s.name) ? X.teal : X.gray, border: `1px solid ${skills.includes(s.name) ? X.tealBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <Btn full onClick={handleSubmit} disabled={loading || !email || !password || (mode === "signup" && !name)} style={role === "designer" ? { background: X.teal, color: X.bg } : {}}>
-              {loading ? "Please wait..." : mode === "login" ? "Sign In →" : "Create Account →"}
-            </Btn>
-
-            <div style={{ textAlign: "center", marginTop: 14 }}>
-              <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }} style={{ background: "none", border: "none", color: role === "designer" ? X.teal : X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>
-                {mode === "login" ? "Don't have an account? Sign up →" : "Already have an account? Sign in →"}
-              </button>
-            </div>
+            <Field label="Password" value={password} onChange={setPassword} type="password" placeholder={mode==="signup"?"Min 6 chars":"Password"} />
+            {iDS && <><Field label="City" value={city} onChange={setCity} /><Field label="Bio" value={bio} onChange={setBio} textarea /><div style={{ marginBottom: 14 }}><label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label><div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name)?X.tealDim:X.bg, color: skills.includes(s.name)?X.teal:X.gray, border: `1px solid ${skills.includes(s.name)?X.tealBorder:X.border}`, cursor: "pointer" }}>{s.name}</button>)}</div></div></>}
+            <Btn full onClick={submit} disabled={loading||!email||!password||(mode==="signup"&&!name)}>{loading?"Please wait...":mode==="login"?"Sign In →":"Create Account →"}</Btn>
+            <div style={{ textAlign: "center", marginTop: 14 }}><button onClick={() => { setMode(mode==="login"?"signup":"login"); setError(""); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>{mode==="login"?"Don't have an account? Sign up →":"Already have an account? Sign in →"}</button></div>
           </Card>
         </div>
       </div>
@@ -1224,139 +1010,36 @@ const AuthScreen = ({ go, onAuth, mode: initMode, role: initRole }) => {
 
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 export default function App() {
-  const [pg, setPg] = useState("landing");
-  const [toast, setToast] = useState(null);
-  const [customer, setCustomer] = useState(null);
-  const [designer, setDesigner] = useState(null);
-  const [rateGig, setRateGig] = useState(null);
-  const [session, setSession] = useState(null);
-
+  const [pg, setPg] = useState("landing"); const [toast, setToast] = useState(null); const [profile, setProfile] = useState(null); const [role, setRole] = useState(null); const [rateGig, setRateGig] = useState(null);
   const note = m => setToast(m);
 
-  // Check for saved session on load
   useEffect(() => {
-    const saved = localStorage.getItem("lmd_session");
-    if (saved) {
-      try {
-        const { role, profile } = JSON.parse(saved);
-        if (role === "customer") { setCustomer(profile); setPg("customer-dash"); }
-        else if (role === "designer") { setDesigner(profile); setPg("designer-dash"); }
-      } catch (e) { localStorage.removeItem("lmd_session"); }
-    }
-
-    // Check for Paystack callback
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("reference") || params.get("trxref");
-    if (ref) {
-      window.history.replaceState({}, "", "/");
-      verifyPayment(ref);
-    }
+    const s = localStorage.getItem("lmd_session");
+    if (s) { try { const { role: r, profile: p } = JSON.parse(s); setRole(r); setProfile(p); setPg("dashboard"); } catch(e) { localStorage.removeItem("lmd_session"); } }
+    const ref = new URLSearchParams(window.location.search).get("reference") || new URLSearchParams(window.location.search).get("trxref");
+    if (ref) { window.history.replaceState({}, "", "/"); verifyPay(ref); }
   }, []);
 
-  const verifyPayment = async (ref) => {
-    note("Verifying payment...");
-    const res = await pay("verify", { reference: ref });
-    if (res.success && res.paid) {
-      note(res.designer ? `Paid! Matched with ${res.designer.name}!` : "Payment confirmed! Gig posted.");
-      if (customer) setPg("customer-dash");
-      if (res.gig && customer) {
-        sendEmail("gig_created", { customerEmail: customer.email, customerName: customer.name, gigType: res.gig.service, turnaround: res.gig.turnaround, price: res.gig.price, brief: res.gig.brief });
-        if (res.designer) sendEmail("designer_matched", { customerEmail: customer.email, customerName: customer.name, designerName: res.designer.name, gigType: res.gig.service, turnaround: res.gig.turnaround, price: res.gig.price });
-      }
-    } else {
-      note("Payment could not be verified. Please contact support.");
-    }
-  };
+  const verifyPay = async (ref) => { note("Verifying payment..."); const r = await pay("verify", { reference: ref }); if (r.success && r.paid) { note(r.designer ? `Matched with ${r.designer.name}!` : "Payment confirmed!"); setPg("dashboard"); } else note("Payment verification failed"); };
+  const handleAuth = (r, p) => { setRole(r); setProfile(p); setPg("dashboard"); localStorage.setItem("lmd_session", JSON.stringify({ role: r, profile: p })); note(`Welcome, ${p.name}!`); };
+  const logout = () => { setProfile(null); setRole(null); localStorage.removeItem("lmd_session"); setPg("landing"); };
+  const updateProfile = (p) => { setProfile(p); localStorage.setItem("lmd_session", JSON.stringify({ role, profile: p })); };
 
-  const handleAuth = (role, profile, sess) => {
-    if (role === "customer") { setCustomer(profile); setPg("customer-dash"); }
-    else if (role === "designer") { setDesigner(profile); setPg("designer-dash"); }
-    setSession(sess);
-    localStorage.setItem("lmd_session", JSON.stringify({ role, profile }));
-    note(`Welcome${profile.name ? ", " + profile.name : ""}!`);
-  };
-
-  const logout = () => {
-    setCustomer(null);
-    setDesigner(null);
-    setSession(null);
-    localStorage.removeItem("lmd_session");
-    setPg("landing");
-  };
-
-  // Create gig with Paystack payment
-  const createGig = async (data) => {
-    if (!customer) return;
-    note("Initiating payment...");
-    const res = await pay("initialize", {
-      email: customer.email,
-      amount: data.price,
-      customer_id: customer.id,
-      service: data.service,
-      turnaround: data.turnaround,
-      brief: data.brief,
-      category: data.category,
-    });
-
-    if (res.success && res.authorization_url) {
-      // Save session before redirecting to Paystack
-      localStorage.setItem("lmd_session", JSON.stringify({ role: "customer", profile: customer }));
-      window.location.href = res.authorization_url;
-    } else {
-      note(res.error || "Payment failed to initialize");
-    }
-  };
-
-  // Accept gig
-  const acceptGig = async (id, turnaround) => {
-    await api("accept_gig", { gig_id: id, designer_id: designer.id, turnaround });
-    note("Gig accepted!");
-  };
-
-  // Deliver gig
-  const deliverGig = async (id) => {
-    await api("deliver_gig", { gig_id: id });
-    note("Delivered!");
-  };
-
-  // Rate
-  const rateSubmit = async (score, feedback) => {
-    if (!rateGig) return;
-    await api("rate_gig", { gig_id: rateGig.id, customer_id: customer.id, designer_id: rateGig.designer_id, score, feedback });
-    setRateGig(null);
-    note("Thanks for rating!");
-  };
-
-  // Modified Shell with logout
-  const AppShell = ({ children, role }) => (
-    <div style={{ minHeight: "100vh", background: X.bg }}>
-      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}>
-        <span onClick={() => setPg("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill>
-          <button onClick={logout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button>
-        </div>
-      </nav>
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div>
-    </div>
-  );
+  const createGig = async (data) => { if (!profile) return; note("Initiating payment..."); const r = await pay("initialize", { email: profile.email, amount: data.price, customer_id: profile.id, service: data.service, turnaround: data.turnaround, brief: data.brief, category: data.category }); if (r.success && r.authorization_url) { localStorage.setItem("lmd_session", JSON.stringify({ role, profile })); window.location.href = r.authorization_url; } else note(r.error || "Payment failed"); };
+  const acceptGig = async (id, t) => { await api("accept_gig", { gig_id: id, designer_id: profile.id, turnaround: t }); note("Gig accepted!"); };
+  const deliverGig = async (id) => { await api("deliver_gig", { gig_id: id }); note("Delivered!"); };
+  const rateSubmit = async (score, fb) => { if (!rateGig) return; await api("rate_gig", { gig_id: rateGig.id, customer_id: profile.id, designer_id: rateGig.designer_id, score, feedback: fb }); setRateGig(null); note("Thanks for rating!"); };
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", color: X.white, background: X.bg, minHeight: "100vh" }}>
       <style>{CSS}</style>
       {toast && <Toasty msg={toast} onClose={() => setToast(null)} />}
-      {rateGig && <RateModal gigId={rateGig.id} designerId={rateGig.designer_id} onDone={rateSubmit} onClose={() => setRateGig(null)} />}
-
       {pg === "landing" && <Landing go={setPg} />}
-
       {pg === "customer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="customer" />}
       {pg === "customer-signup" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="customer" />}
       {pg === "designer-register" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="designer" />}
       {pg === "designer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="designer" />}
-
-      {pg === "customer-dash" && customer && <AppShell role="customer"><CustDash customer={customer} onCreateGig={() => setPg("create-gig")} onRate={(id) => setRateGig({ id, designer_id: null, service: "" })} onUpdateCustomer={(c) => { setCustomer(c); localStorage.setItem("lmd_session", JSON.stringify({ role: "customer", profile: c })); }} /></AppShell>}
-      {pg === "create-gig" && customer && <AppShell role="customer"><CreateGig onSubmit={createGig} onBack={() => setPg("customer-dash")} /></AppShell>}
-      {pg === "designer-dash" && designer && <AppShell role="designer"><DesDash designer={designer} onAccept={acceptGig} onDeliver={deliverGig} onUpdateDesigner={(d) => { setDesigner(d); localStorage.setItem("lmd_session", JSON.stringify({ role: "designer", profile: d })); }} /></AppShell>}
+      {pg === "dashboard" && profile && role && <Dashboard role={role} profile={profile} onLogout={logout} createGig={createGig} acceptGig={acceptGig} deliverGig={deliverGig} onUpdateProfile={updateProfile} rateGig={rateGig} rateSubmit={rateSubmit} setRateGig={setRateGig} />}
     </div>
   );
 }
