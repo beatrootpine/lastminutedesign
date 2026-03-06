@@ -111,7 +111,7 @@ const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(on
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.orange, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
 
 // ─── LAYOUT ─────────────────────────────────────────────────────────────────
-const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: "rgba(9,9,11,0.85)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("designer-register")} style={{ color: X.teal, borderColor: X.tealBorder }}>Join as Designer</Btn><Btn sm onClick={() => go("customer-login")}>Get Design</Btn></div>}</nav>;
+const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: "rgba(9,9,11,0.85)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log In</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
 
 const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
 
@@ -128,21 +128,47 @@ const Landing = ({ go }) => {
     <div style={{ background: X.bg, minHeight: "100vh" }}>
       <Nav go={go} />
 
-      {/* ─── HERO ─── */}
-      <div style={{ paddingTop: 100, textAlign: "center", maxWidth: 680, margin: "0 auto", padding: "100px 20px 40px" }}>
-        <Pill>24/7 Rush Creative Studio</Pill>
-        <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(38px, 7vw, 68px)", lineHeight: 1.06, color: X.white, margin: "20px 0 16px", letterSpacing: "-0.03em" }}>
-          Never miss a<br />deadline <span style={{ color: X.orange }}>again.</span>
-        </h1>
-        <p style={{ fontSize: 17, color: X.grayLight, maxWidth: 480, margin: "0 auto 16px", lineHeight: 1.6 }}>
-          On-demand graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
-        </p>
-        <p style={{ fontSize: 13, color: X.gray, marginBottom: 36 }}>
-          No contracts · No subscriptions · Pay per project
-        </p>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          <Btn onClick={() => go("customer-login")} style={{ padding: "14px 28px", fontSize: 15 }}>Get Design Now →</Btn>
-          <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15, background: X.tealDim, color: X.teal, border: `1px solid ${X.tealBorder}` }}>Earn as a Designer</Btn>
+      {/* ─── HERO BANNER ─── */}
+      <div style={{
+        position: "relative", overflow: "hidden", minHeight: 520,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "100px 20px 60px",
+        background: `linear-gradient(135deg, ${X.bg} 0%, #1a1000 40%, #0a0a12 70%, ${X.bg} 100%)`,
+      }}>
+        {/* Decorative elements */}
+        <div style={{ position: "absolute", top: 40, right: "10%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${X.orange}12, transparent 70%)`, filter: "blur(60px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: 20, left: "5%", width: 200, height: 200, borderRadius: "50%", background: `radial-gradient(circle, ${X.teal}10, transparent 70%)`, filter: "blur(50px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "15%", left: "8%", width: 1, height: 120, background: `linear-gradient(to bottom, ${X.orange}40, transparent)`, transform: "rotate(20deg)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "20%", right: "12%", width: 1, height: 80, background: `linear-gradient(to bottom, ${X.teal}30, transparent)`, transform: "rotate(-15deg)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", right: "20%", width: 60, height: 60, border: `1px solid ${X.orange}15`, borderRadius: 12, transform: "rotate(45deg)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "30%", left: "15%", width: 40, height: 40, border: `1px solid ${X.teal}15`, borderRadius: 8, transform: "rotate(30deg)", pointerEvents: "none" }} />
+
+        {/* Banner grid pattern */}
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${X.border}08 1px, transparent 1px), linear-gradient(90deg, ${X.border}08 1px, transparent 1px)`, backgroundSize: "60px 60px", pointerEvents: "none" }} />
+
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 700 }}>
+          <Pill>24/7 Rush Creative Studio</Pill>
+          <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(40px, 7vw, 72px)", lineHeight: 1.04, color: X.white, margin: "20px 0 16px", letterSpacing: "-0.03em" }}>
+            Never miss a<br />deadline <span style={{ color: X.orange }}>again.</span>
+          </h1>
+          <p style={{ fontSize: 17, color: X.grayLight, maxWidth: 500, margin: "0 auto 16px", lineHeight: 1.6 }}>
+            On-demand graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
+          </p>
+          <p style={{ fontSize: 13, color: X.gray, marginBottom: 32 }}>
+            No contracts · No subscriptions · Pay per project
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <Btn onClick={() => go("customer-signup")} style={{ padding: "14px 28px", fontSize: 15 }}>Get Design Now →</Btn>
+            <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15, background: X.tealDim, color: X.teal, border: `1px solid ${X.tealBorder}` }}>Earn as a Designer</Btn>
+          </div>
+
+          {/* Mini trust line */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 32, opacity: 0.5 }}>
+            {["⚡ 4h Rush Delivery", "🎯 247+ Designers", "⭐ 4.8 Avg Rating"].map(t => (
+              <T key={t} sm dim>{t}</T>
+            ))}
+          </div>
         </div>
       </div>
 
