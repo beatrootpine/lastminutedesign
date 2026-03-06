@@ -35,6 +35,22 @@ const progressPercent = (created, deadline) => {
   return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
 };
 
+// ─── EMAIL HELPER ───────────────────────────────────────────────────────────
+const sendEmail = async (type, data) => {
+  try {
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, data }),
+    });
+    if (!res.ok) console.error("Email failed:", await res.text());
+    return res.ok;
+  } catch (err) {
+    console.error("Email error:", err);
+    return false;
+  }
+};
+
 // ─── STYLES ─────────────────────────────────────────────────────────────────
 const fonts = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
@@ -812,6 +828,9 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [ratingGigId, setRatingGigId] = useState(null);
   const [currentDesigner, setCurrentDesigner] = useState(MOCK_DESIGNERS[0]);
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [designerEmail, setDesignerEmail] = useState("");
 
   const showToast = (msg) => setToast(msg);
 
@@ -832,28 +851,84 @@ export default function App() {
     setGigs(prev => [newGig, ...prev]);
     showToast(`Matched with ${matchedDesigner.name}!`);
     setPage("customer-dash");
+
+    // Send emails: gig created + designer matched
+    sendEmail("gig_created", {
+      customerEmail: customerEmail,
+      customerName: customerName,
+      gigType: data.type,
+      turnaround: data.turnaround,
+      price: PRICING[data.turnaround].price,
+      brief: data.brief,
+    });
+    sendEmail("designer_matched", {
+      customerEmail: customerEmail,
+      customerName: customerName,
+      designerName: matchedDesigner.name,
+      gigType: data.type,
+      turnaround: data.turnaround,
+      price: PRICING[data.turnaround].price,
+    });
   };
 
   const handleAcceptGig = (gigId) => {
+    const gig = gigs.find(g => g.id === gigId);
     setGigs(prev => prev.map(g =>
       g.id === gigId ? { ...g, status: "in_progress", designerId: currentDesigner.id, created: Date.now(), deadline: Date.now() + g.turnaround * 3600000 } : g
     ));
     showToast("Gig accepted! Timer started.");
+
+    // Send email to designer
+    if (gig) {
+      sendEmail("gig_accepted", {
+        designerEmail: designerEmail,
+        designerName: currentDesigner.name,
+        gigType: gig.type,
+        turnaround: gig.turnaround,
+        price: gig.price,
+        brief: gig.brief,
+      });
+    }
   };
 
   const handleDeliverGig = (gigId) => {
+    const gig = gigs.find(g => g.id === gigId);
+    const designer = gig ? MOCK_DESIGNERS.find(d => d.id === gig.designerId) : null;
     setGigs(prev => prev.map(g =>
       g.id === gigId ? { ...g, status: "delivered" } : g
     ));
     showToast("Delivered! Waiting for client review.");
+
+    // Send email to customer
+    if (gig) {
+      sendEmail("gig_delivered", {
+        customerEmail: customerEmail,
+        customerName: customerName,
+        designerName: designer?.name || currentDesigner.name,
+        gigType: gig.type,
+      });
+    }
   };
 
   const handleRate = (rating, feedback) => {
+    const gig = gigs.find(g => g.id === ratingGigId);
+    const designer = gig ? MOCK_DESIGNERS.find(d => d.id === gig.designerId) : null;
     setGigs(prev => prev.map(g =>
       g.id === ratingGigId ? { ...g, status: "completed", rated: true, customerRating: rating } : g
     ));
     setRatingGigId(null);
     showToast("Thanks for rating!");
+
+    // Send rating email to designer
+    if (gig && designer) {
+      sendEmail("gig_rated", {
+        designerEmail: designerEmail,
+        designerName: designer.name,
+        gigType: gig.type,
+        rating,
+        feedback,
+      });
+    }
   };
 
   // Seed some demo gigs
@@ -921,15 +996,42 @@ export default function App() {
           onRegister={(data) => {
             showToast("Application submitted! Welcome aboard.");
             setCurrentDesigner({ ...MOCK_DESIGNERS[0], name: data.name, skills: data.skills, city: data.city, bio: data.bio });
+            setDesignerEmail(data.email);
             setPage("designer-dash");
+            sendEmail("designer_welcome", {
+              designerEmail: data.email,
+              designerName: data.name,
+            });
           }}
           onNavigate={setPage}
         />
       )}
 
-      {(page === "customer-login" || page === "customer-dash") && (
+      {page === "customer-login" && (
+        <div style={{ minHeight: "100vh", background: "var(--dark)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ maxWidth: 420, width: "100%" }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ fontFamily: "Syne", fontWeight: 800, fontSize: 22, color: "var(--cream)", marginBottom: 8 }}>
+                <span style={{ color: "var(--mango)" }}>last</span>minute<span style={{ color: "var(--mango)" }}>.</span>designs
+              </div>
+              <h2 style={{ fontFamily: "Syne", fontWeight: 800, fontSize: 28, color: "var(--cream)", margin: "0 0 4px" }}>Welcome back</h2>
+              <p style={{ fontFamily: "DM Sans", color: "var(--text-dim)", margin: 0 }}>Enter your details to continue</p>
+            </div>
+            <Card>
+              <Input label="Your Name" value={customerName} onChange={setCustomerName} placeholder="John Smith" />
+              <Input label="Email" value={customerEmail} onChange={setCustomerEmail} type="email" placeholder="john@email.com" />
+              <Button style={{ width: "100%", marginTop: 8 }} onClick={() => {
+                if (customerName && customerEmail) setPage("customer-dash");
+              }} disabled={!customerName || !customerEmail}>
+                Continue →
+              </Button>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {page === "customer-dash" && (
         <DashShell role="customer">
-          {page === "customer-login" && (() => { setPage("customer-dash"); return null; })()}
           <CustomerDashboard
             gigs={gigs}
             onCreateGig={() => setPage("create-gig")}
@@ -948,9 +1050,29 @@ export default function App() {
         </DashShell>
       )}
 
-      {(page === "designer-login" || page === "designer-dash") && (
+      {page === "designer-login" && (
+        <div style={{ minHeight: "100vh", background: "var(--dark)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ maxWidth: 420, width: "100%" }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ fontFamily: "Syne", fontWeight: 800, fontSize: 22, color: "var(--cream)", marginBottom: 8 }}>
+                <span style={{ color: "var(--mango)" }}>last</span>minute<span style={{ color: "var(--mango)" }}>.</span>designs
+              </div>
+              <h2 style={{ fontFamily: "Syne", fontWeight: 800, fontSize: 28, color: "var(--cream)", margin: "0 0 4px" }}>Designer Sign In</h2>
+            </div>
+            <Card>
+              <Input label="Email" value={designerEmail} onChange={setDesignerEmail} type="email" placeholder="your@email.com" />
+              <Button style={{ width: "100%", marginTop: 8 }} onClick={() => {
+                if (designerEmail) setPage("designer-dash");
+              }} disabled={!designerEmail}>
+                Sign In →
+              </Button>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {page === "designer-dash" && (
         <DashShell role="designer">
-          {page === "designer-login" && (() => { setPage("designer-dash"); return null; })()}
           <DesignerDashboard
             designer={currentDesigner}
             gigs={gigs}
