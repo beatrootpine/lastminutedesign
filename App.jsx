@@ -1290,11 +1290,12 @@ const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
     setLoading(false);
   };
 
-  const googleSignIn = async () => {
+  const googleSignIn = () => {
     setLoading(true);
-    const r = await auth("google_url", { role });
-    if (r.url) { localStorage.setItem("lmd_google_role", role); window.location.href = r.url; }
-    else { setError("Google sign in unavailable"); setLoading(false); }
+    localStorage.setItem("lmd_google_role", role);
+    const SUPA_URL = "https://jxbdlucacyafypexranl.supabase.co";
+    const redirectTo = encodeURIComponent(window.location.origin + "/");
+    window.location.href = `${SUPA_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
   };
 
   const googleBtnStyle = { width: "100%", padding: "10px 16px", borderRadius: 8, border: `1px solid ${X.border}`, background: X.bg, color: X.white, fontFamily: "Inter", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 };
