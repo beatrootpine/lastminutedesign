@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── PRICING DATA ───────────────────────────────────────────────────────────
 const SERVICES = {
-  "Brand Identity": [
+  "Corporate Identity": [
     { name: "Logo Design", prices: { 4: 1750, 12: 1200, 24: 1000 } },
     { name: "Brand Identity Pack", prices: { 4: 4500, 12: 3200, 24: 2800 } },
     { name: "Business Card Design", prices: { 4: 850, 12: 650, 24: 500 } },
     { name: "Letterhead & Envelope", prices: { 4: 1200, 12: 950, 24: 750 } },
     { name: "Brand Guidelines Document", prices: { 4: 3500, 12: 2800, 24: 2200 } },
   ],
-  "Print & Marketing": [
+  "Print & Marketing Designs": [
     { name: "Flyer / Poster", prices: { 4: 950, 12: 750, 24: 600 } },
     { name: "Brochure (bi/tri-fold)", prices: { 4: 1800, 12: 1400, 24: 1100 } },
     { name: "Event Backdrop / Banner", prices: { 4: 2200, 12: 1700, 24: 1400 } },
@@ -36,7 +36,7 @@ const ALL_SERVICES = Object.values(SERVICES).flat();
 const TIERS = {
   4: { label: "4 Hours", tag: "RUSH", desc: "Ultra-priority. Work starts immediately." },
   12: { label: "12 Hours", tag: "EXPRESS", desc: "Same-day delivery. Starts within 2 hours." },
-  24: { label: "24 Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
+  24: { label: "24+ Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
 };
 
 // ─── API HELPER ─────────────────────────────────────────────────────────────
@@ -404,8 +404,8 @@ const Landing = ({ go }) => {
         <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
           <span style={{ color: X.orange }}>lastminute</span>.design
         </div>
-        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
-        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
+        <T dim sm>Prooudly South Africa</T>
+        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 </T>
         <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
       </div>
     </div>
