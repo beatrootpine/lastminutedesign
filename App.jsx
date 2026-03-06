@@ -828,6 +828,129 @@ const RateModal = ({ gigId, designerId, onDone, onClose }) => {
   );
 };
 
+// ─── AUTH API HELPER ────────────────────────────────────────────────────────
+const auth = async (action, data) => {
+  try {
+    const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...data }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Auth error");
+    return j;
+  } catch (e) { return { error: e.message }; }
+};
+
+const pay = async (action, data) => {
+  try {
+    const r = await fetch("/api/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...data }) });
+    return r.json();
+  } catch (e) { return { error: e.message }; }
+};
+
+// ─── AUTH SCREENS ───────────────────────────────────────────────────────────
+const AuthScreen = ({ go, onAuth, mode: initMode, role: initRole }) => {
+  const [mode, setMode] = useState(initMode || "login"); // login or signup
+  const [role, setRole] = useState(initRole || "customer"); // customer or designer
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
+  const [bio, setBio] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
+
+  const handleSubmit = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      if (mode === "signup") {
+        if (role === "customer") {
+          const res = await auth("signup_customer", { email, password, name });
+          if (res.error) throw new Error(res.error);
+          if (res.customer) onAuth("customer", res.customer, res.session);
+        } else {
+          if (!skills.length) throw new Error("Select at least one skill");
+          const res = await auth("signup_designer", { email, password, name, city, bio, skills });
+          if (res.error) throw new Error(res.error);
+          if (res.designer) {
+            onAuth("designer", res.designer, res.session);
+            sendEmail("designer_welcome", { designerEmail: email, designerName: name });
+          }
+        }
+      } else {
+        const res = await auth("login", { email, password });
+        if (res.error) throw new Error(res.error);
+        if (res.profile) onAuth(res.role, res.profile, res.session);
+        else throw new Error("Account not found");
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  const isDesignerSignup = mode === "signup" && role === "designer";
+
+  return (
+    <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ maxWidth: isDesignerSignup ? 460 : 360, width: "100%" }}>
+        <Nav go={go} minimal />
+        <div style={{ paddingTop: 80 }}>
+          <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back</button>
+
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <H s={22}>{mode === "login" ? "Welcome back" : role === "designer" ? "Join as a Designer" : "Create an account"}</H>
+            <T dim style={{ marginTop: 4 }}>{mode === "login" ? "Sign in to your account" : role === "designer" ? "Start earning today" : "Get your first design delivered fast"}</T>
+          </div>
+
+          {/* Role toggle for signup */}
+          {mode === "signup" && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: X.card, borderRadius: 8, padding: 4, border: `1px solid ${X.border}` }}>
+              {["customer", "designer"].map(r => (
+                <button key={r} onClick={() => setRole(r)} style={{
+                  flex: 1, padding: "8px", borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer",
+                  background: role === r ? X.orange : "transparent", color: role === r ? X.bg : X.gray, textTransform: "capitalize",
+                }}>{r === "customer" ? "I need design" : "I'm a designer"}</button>
+              ))}
+            </div>
+          )}
+
+          <Card>
+            {error && <div style={{ padding: "8px 12px", marginBottom: 12, borderRadius: 6, background: X.red + "18", border: `1px solid ${X.red}30`, color: X.red, fontSize: 12, fontFamily: "Inter" }}>{error}</div>}
+
+            {mode === "signup" && <Field label="Full Name" value={name} onChange={setName} placeholder="Your name" />}
+            <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
+            <Field label="Password" value={password} onChange={setPassword} type="password" placeholder={mode === "signup" ? "Create a password (min 6 chars)" : "Your password"} />
+
+            {isDesignerSignup && (
+              <>
+                <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
+                <Field label="Short Bio" value={bio} onChange={setBio} textarea placeholder="What makes your work stand out..." />
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.orangeDim : X.bg, color: skills.includes(s.name) ? X.orange : X.gray, border: `1px solid ${skills.includes(s.name) ? X.orangeBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Btn full onClick={handleSubmit} disabled={loading || !email || !password || (mode === "signup" && !name)}>
+              {loading ? "Please wait..." : mode === "login" ? "Sign In →" : "Create Account →"}
+            </Btn>
+
+            <div style={{ textAlign: "center", marginTop: 14 }}>
+              <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>
+                {mode === "login" ? "Don't have an account? Sign up →" : "Already have an account? Sign in →"}
+              </button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 export default function App() {
   const [pg, setPg] = useState("landing");
@@ -835,63 +958,94 @@ export default function App() {
   const [customer, setCustomer] = useState(null);
   const [designer, setDesigner] = useState(null);
   const [rateGig, setRateGig] = useState(null);
-
-  // Auth form state
-  const [cName, setCName] = useState("");
-  const [cEmail, setCEmail] = useState("");
-  const [dEmail, setDEmail] = useState("");
+  const [session, setSession] = useState(null);
 
   const note = m => setToast(m);
 
-  // Customer login
-  const custLogin = async () => {
-    const res = await api("customer_login", { email: cEmail, name: cName });
-    if (res.customer) { setCustomer(res.customer); setPg("customer-dash"); }
-    else note("Login failed");
+  // Check for saved session on load
+  useEffect(() => {
+    const saved = localStorage.getItem("lmd_session");
+    if (saved) {
+      try {
+        const { role, profile } = JSON.parse(saved);
+        if (role === "customer") { setCustomer(profile); setPg("customer-dash"); }
+        else if (role === "designer") { setDesigner(profile); setPg("designer-dash"); }
+      } catch (e) { localStorage.removeItem("lmd_session"); }
+    }
+
+    // Check for Paystack callback
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("reference") || params.get("trxref");
+    if (ref) {
+      window.history.replaceState({}, "", "/");
+      verifyPayment(ref);
+    }
+  }, []);
+
+  const verifyPayment = async (ref) => {
+    note("Verifying payment...");
+    const res = await pay("verify", { reference: ref });
+    if (res.success && res.paid) {
+      note(res.designer ? `Paid! Matched with ${res.designer.name}!` : "Payment confirmed! Gig posted.");
+      if (customer) setPg("customer-dash");
+      if (res.gig && customer) {
+        sendEmail("gig_created", { customerEmail: customer.email, customerName: customer.name, gigType: res.gig.service, turnaround: res.gig.turnaround, price: res.gig.price, brief: res.gig.brief });
+        if (res.designer) sendEmail("designer_matched", { customerEmail: customer.email, customerName: customer.name, designerName: res.designer.name, gigType: res.gig.service, turnaround: res.gig.turnaround, price: res.gig.price });
+      }
+    } else {
+      note("Payment could not be verified. Please contact support.");
+    }
   };
 
-  // Designer login
-  const desLogin = async () => {
-    const res = await api("designer_login", { email: dEmail });
-    if (res.designer) { setDesigner(res.designer); setPg("designer-dash"); }
-    else note(res.error || "Not found. Register first.");
+  const handleAuth = (role, profile, sess) => {
+    if (role === "customer") { setCustomer(profile); setPg("customer-dash"); }
+    else if (role === "designer") { setDesigner(profile); setPg("designer-dash"); }
+    setSession(sess);
+    localStorage.setItem("lmd_session", JSON.stringify({ role, profile }));
+    note(`Welcome${profile.name ? ", " + profile.name : ""}!`);
   };
 
-  // Designer register
-  const desRegister = async (data) => {
-    const res = await api("designer_register", data);
-    if (res.designer) {
-      setDesigner(res.designer);
-      setDEmail(data.email);
-      note(res.existing ? "Welcome back!" : "Welcome aboard!");
-      setPg("designer-dash");
-      if (!res.existing) sendEmail("designer_welcome", { designerEmail: data.email, designerName: data.name });
-    } else note("Registration failed");
+  const logout = () => {
+    setCustomer(null);
+    setDesigner(null);
+    setSession(null);
+    localStorage.removeItem("lmd_session");
+    setPg("landing");
   };
 
-  // Create gig
+  // Create gig with Paystack payment
   const createGig = async (data) => {
-    const res = await api("create_gig", { ...data, customer_id: customer.id });
-    if (res.gig) {
-      note(res.designer ? `Matched with ${res.designer.name}!` : "Gig posted! Waiting for a designer.");
-      setPg("customer-dash");
-      sendEmail("gig_created", { customerEmail: customer.email, customerName: customer.name, gigType: data.service, turnaround: data.turnaround, price: data.price, brief: data.brief });
-      if (res.designer) sendEmail("designer_matched", { customerEmail: customer.email, customerName: customer.name, designerName: res.designer.name, gigType: data.service, turnaround: data.turnaround, price: data.price });
-    } else note("Failed to create gig");
+    if (!customer) return;
+    note("Initiating payment...");
+    const res = await pay("initialize", {
+      email: customer.email,
+      amount: data.price,
+      customer_id: customer.id,
+      service: data.service,
+      turnaround: data.turnaround,
+      brief: data.brief,
+      category: data.category,
+    });
+
+    if (res.success && res.authorization_url) {
+      // Save session before redirecting to Paystack
+      localStorage.setItem("lmd_session", JSON.stringify({ role: "customer", profile: customer }));
+      window.location.href = res.authorization_url;
+    } else {
+      note(res.error || "Payment failed to initialize");
+    }
   };
 
   // Accept gig
   const acceptGig = async (id, turnaround) => {
     await api("accept_gig", { gig_id: id, designer_id: designer.id, turnaround });
     note("Gig accepted!");
-    sendEmail("gig_accepted", { designerEmail: designer.email, designerName: designer.name, gigType: "Gig", turnaround, price: 0 });
   };
 
   // Deliver gig
   const deliverGig = async (id) => {
     await api("deliver_gig", { gig_id: id });
     note("Delivered!");
-    if (customer) sendEmail("gig_delivered", { customerEmail: customer.email, customerName: customer.name, designerName: designer?.name || "" });
   };
 
   // Rate
@@ -900,8 +1054,21 @@ export default function App() {
     await api("rate_gig", { gig_id: rateGig.id, customer_id: customer.id, designer_id: rateGig.designer_id, score, feedback });
     setRateGig(null);
     note("Thanks for rating!");
-    sendEmail("gig_rated", { designerEmail: "", designerName: "", gigType: rateGig.service, rating: score, feedback });
   };
+
+  // Modified Shell with logout
+  const AppShell = ({ children, role }) => (
+    <div style={{ minHeight: "100vh", background: X.bg }}>
+      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}>
+        <span onClick={() => setPg("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Pill color={role === "designer" ? X.green : X.orange}>{role}</Pill>
+          <button onClick={logout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button>
+        </div>
+      </nav>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div>
+    </div>
+  );
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", color: X.white, background: X.bg, minHeight: "100vh" }}>
@@ -911,39 +1078,14 @@ export default function App() {
 
       {pg === "landing" && <Landing go={setPg} />}
 
-      {pg === "customer-login" && (
-        <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ maxWidth: 360, width: "100%" }}>
-            <Nav go={setPg} minimal />
-            <div style={{ paddingTop: 80 }}>
-              <button onClick={() => setPg("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
-              <div style={{ textAlign: "center", marginBottom: 24 }}><H s={22}>Get started</H><T dim style={{ marginTop: 4 }}>Enter your details to submit a gig</T></div>
-              <Card><Field label="Name" value={cName} onChange={setCName} placeholder="Your name" /><Field label="Email" value={cEmail} onChange={setCEmail} type="email" placeholder="you@email.com" /><Btn full onClick={custLogin} disabled={!cName || !cEmail}>Continue →</Btn></Card>
-            </div>
-          </div>
-        </div>
-      )}
+      {pg === "customer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="customer" />}
+      {pg === "customer-signup" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="customer" />}
+      {pg === "designer-register" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="designer" />}
+      {pg === "designer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="designer" />}
 
-      {pg === "customer-dash" && customer && <Shell role="customer" go={setPg}><CustDash customer={customer} onCreateGig={() => setPg("create-gig")} onRate={(id) => { const g = document.querySelector(`[data-gig="${id}"]`); setRateGig({ id, designer_id: null, service: "" }); }} /></Shell>}
-
-      {pg === "create-gig" && customer && <Shell role="customer" go={setPg}><CreateGig onSubmit={createGig} onBack={() => setPg("customer-dash")} /></Shell>}
-
-      {pg === "designer-register" && <DesRegForm go={setPg} onReg={desRegister} />}
-
-      {pg === "designer-login" && (
-        <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ maxWidth: 360, width: "100%" }}>
-            <Nav go={setPg} minimal />
-            <div style={{ paddingTop: 80 }}>
-              <button onClick={() => setPg("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
-              <div style={{ textAlign: "center", marginBottom: 24 }}><H s={22}>Designer sign in</H></div>
-              <Card><Field label="Email" value={dEmail} onChange={setDEmail} type="email" placeholder="you@email.com" /><Btn full onClick={desLogin} disabled={!dEmail}>Sign In →</Btn></Card>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {pg === "designer-dash" && designer && <Shell role="designer" go={setPg}><DesDash designer={designer} onAccept={acceptGig} onDeliver={deliverGig} /></Shell>}
+      {pg === "customer-dash" && customer && <AppShell role="customer"><CustDash customer={customer} onCreateGig={() => setPg("create-gig")} onRate={(id) => setRateGig({ id, designer_id: null, service: "" })} /></AppShell>}
+      {pg === "create-gig" && customer && <AppShell role="customer"><CreateGig onSubmit={createGig} onBack={() => setPg("customer-dash")} /></AppShell>}
+      {pg === "designer-dash" && designer && <AppShell role="designer"><DesDash designer={designer} onAccept={acceptGig} onDeliver={deliverGig} /></AppShell>}
     </div>
   );
 }
