@@ -152,14 +152,54 @@ export default async function handler(req, res) {
 
       case "deliver_gig": {
         const { gig_id } = req.body;
+        const dgigPre = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        const round = dgigPre?.[0]?.current_round || 1;
         await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "delivered", delivered_at: new Date().toISOString() } });
+        // Add timeline event
+        const ddes2 = dgigPre?.[0]?.designer_id ? await db(`designers?id=eq.${dgigPre[0].designer_id}&limit=1`) : [];
+        await db("timeline_events", { method: "POST", body: { gig_id, event_type: "delivered", actor_role: "designer", actor_name: ddes2?.[0]?.name || "Designer", message: `Delivered round ${round} designs for review`, round_number: round } });
         // Notify customer
-        const dgig = await db(`gigs?id=eq.${gig_id}&limit=1`);
-        if (dgig?.[0]?.customer_id) {
-          const dcust = await db(`customers?id=eq.${dgig[0].customer_id}&limit=1`);
-          const ddes = dgig[0].designer_id ? await db(`designers?id=eq.${dgig[0].designer_id}&limit=1`) : [];
-          if (dcust?.[0]) notify("gig_delivered", { to: dcust[0].email, customerName: dcust[0].name, designerName: ddes?.[0]?.name || "Your designer", service: dgig[0].service });
+        if (dgigPre?.[0]?.customer_id) {
+          const dcust = await db(`customers?id=eq.${dgigPre[0].customer_id}&limit=1`);
+          if (dcust?.[0]) notify("gig_delivered", { to: dcust[0].email, customerName: dcust[0].name, designerName: ddes2?.[0]?.name || "Your designer", service: dgigPre[0].service });
         }
+        return res.json({ success: true });
+      }
+
+      case "accept_delivery": {
+        const { gig_id, customer_name } = req.body;
+        await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "completed", completed_at: new Date().toISOString() } });
+        await db("timeline_events", { method: "POST", body: { gig_id, event_type: "accepted", actor_role: "customer", actor_name: customer_name || "Customer", message: "Accepted the final designs" } });
+        return res.json({ success: true });
+      }
+
+      case "request_revision": {
+        const { gig_id, customer_name, feedback } = req.body;
+        const revGig = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        if (!revGig?.[0]) return res.status(404).json({ error: "Gig not found" });
+        const g = revGig[0];
+        const maxRev = g.turnaround === 4 ? 1 : g.turnaround === 12 ? 2 : 3;
+        if (g.revisions_used >= maxRev) return res.json({ error: "No revisions remaining", remaining: 0 });
+        const newRound = (g.current_round || 1) + 1;
+        await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "in_progress", revisions_used: g.revisions_used + 1, current_round: newRound, deadline: new Date(Date.now() + g.turnaround * 3600000).toISOString() } });
+        await db("timeline_events", { method: "POST", body: { gig_id, event_type: "revision_requested", actor_role: "customer", actor_name: customer_name || "Customer", message: feedback || "Requested changes", round_number: newRound } });
+        // Notify designer
+        if (g.designer_id) {
+          const revDes = await db(`designers?id=eq.${g.designer_id}&limit=1`);
+          if (revDes?.[0]) notify("new_message", { to: revDes[0].email, recipientName: revDes[0].name, senderName: customer_name || "Client", service: g.service, message: "Revision requested: " + (feedback || "See project for details") });
+        }
+        return res.json({ success: true, revisionsUsed: g.revisions_used + 1, maxRevisions: maxRev, remaining: maxRev - g.revisions_used - 1 });
+      }
+
+      case "get_timeline": {
+        const { gig_id: tlGigId } = req.query;
+        const events = await db(`timeline_events?gig_id=eq.${tlGigId}&order=created_at.asc`);
+        return res.json({ events });
+      }
+
+      case "add_timeline_event": {
+        const { gig_id: teGigId, event_type, actor_role, actor_name, message, round_number } = req.body;
+        await db("timeline_events", { method: "POST", body: { gig_id: teGigId, event_type, actor_role, actor_name, message, round_number } });
         return res.json({ success: true });
       }
 
