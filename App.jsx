@@ -612,7 +612,9 @@ const DesRegForm = ({ go, onReg }) => {
     <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ maxWidth: 460, width: "100%" }}>
         <Nav go={go} minimal />
-        <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}><H s={22}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
+        <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}>
+          <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4, margin: "0 auto 16px" }}>← Back</button>
+          <H s={22}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
         <Card>
           <Field label="Full Name" value={name} onChange={setName} placeholder="Thando Mokoena" />
           <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
@@ -737,8 +739,11 @@ export default function App() {
         <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ maxWidth: 360, width: "100%" }}>
             <Nav go={setPg} minimal />
-            <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}><H s={22}>Get started</H><T dim style={{ marginTop: 4 }}>Enter your details to submit a gig</T></div>
-            <Card><Field label="Name" value={cName} onChange={setCName} placeholder="Your name" /><Field label="Email" value={cEmail} onChange={setCEmail} type="email" placeholder="you@email.com" /><Btn full onClick={custLogin} disabled={!cName || !cEmail}>Continue →</Btn></Card>
+            <div style={{ paddingTop: 80 }}>
+              <button onClick={() => setPg("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
+              <div style={{ textAlign: "center", marginBottom: 24 }}><H s={22}>Get started</H><T dim style={{ marginTop: 4 }}>Enter your details to submit a gig</T></div>
+              <Card><Field label="Name" value={cName} onChange={setCName} placeholder="Your name" /><Field label="Email" value={cEmail} onChange={setCEmail} type="email" placeholder="you@email.com" /><Btn full onClick={custLogin} disabled={!cName || !cEmail}>Continue →</Btn></Card>
+            </div>
           </div>
         </div>
       )}
@@ -753,8 +758,11 @@ export default function App() {
         <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ maxWidth: 360, width: "100%" }}>
             <Nav go={setPg} minimal />
-            <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}><H s={22}>Designer sign in</H></div>
-            <Card><Field label="Email" value={dEmail} onChange={setDEmail} type="email" placeholder="you@email.com" /><Btn full onClick={desLogin} disabled={!dEmail}>Sign In →</Btn></Card>
+            <div style={{ paddingTop: 80 }}>
+              <button onClick={() => setPg("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
+              <div style={{ textAlign: "center", marginBottom: 24 }}><H s={22}>Designer sign in</H></div>
+              <Card><Field label="Email" value={dEmail} onChange={setDEmail} type="email" placeholder="you@email.com" /><Btn full onClick={desLogin} disabled={!dEmail}>Sign In →</Btn></Card>
+            </div>
           </div>
         </div>
       )}
