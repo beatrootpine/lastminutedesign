@@ -79,6 +79,8 @@ const X = {
   bg: "#09090b", card: "#131316", border: "#1e1e24",
   orange: "#f97316", orangeLight: "#fb923c",
   orangeDim: "rgba(249,115,22,0.1)", orangeBorder: "rgba(249,115,22,0.2)",
+  teal: "#06b6d4", tealLight: "#22d3ee",
+  tealDim: "rgba(6,182,212,0.1)", tealBorder: "rgba(6,182,212,0.2)",
   white: "#fafafa", gray: "#71717a", grayLight: "#a1a1aa",
   green: "#22c55e", red: "#ef4444", yellow: "#eab308",
 };
@@ -109,9 +111,9 @@ const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(on
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.orange, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
 
 // ─── LAYOUT ─────────────────────────────────────────────────────────────────
-const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: "rgba(9,9,11,0.85)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("designer-register")}>Join as Designer</Btn><Btn sm onClick={() => go("customer-login")}>Get Design</Btn></div>}</nav>;
+const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px", background: "rgba(9,9,11,0.85)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>{!minimal && <div style={{ display: "flex", gap: 8 }}><Btn v="ghost" sm onClick={() => go("designer-register")} style={{ color: X.teal, borderColor: X.tealBorder }}>Join as Designer</Btn><Btn sm onClick={() => go("customer-login")}>Get Design</Btn></div>}</nav>;
 
-const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={role === "designer" ? X.green : X.orange}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
+const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
 
 // ─── LANDING ────────────────────────────────────────────────────────────────
 const Landing = ({ go }) => {
@@ -140,7 +142,7 @@ const Landing = ({ go }) => {
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           <Btn onClick={() => go("customer-login")} style={{ padding: "14px 28px", fontSize: 15 }}>Get Design Now →</Btn>
-          <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15 }}>Earn as a Designer</Btn>
+          <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15, background: X.tealDim, color: X.teal, border: `1px solid ${X.tealBorder}` }}>Earn as a Designer</Btn>
         </div>
       </div>
 
@@ -256,20 +258,28 @@ const Landing = ({ go }) => {
       </div>
 
       {/* ─── FOR DESIGNERS ─── */}
-      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(249,115,22,0.04), transparent)" }}>
+      <div style={{ borderTop: `1px solid ${X.border}`, background: "linear-gradient(180deg, rgba(6,182,212,0.04), transparent)" }}>
         <Section>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <SectionLabel>For Designers</SectionLabel>
+            <Pill color={X.teal}>For Designers</Pill>
             <SectionH>Turn your talent into income.<br />On your terms.</SectionH>
             <SectionP style={{ margin: "0 auto" }}>
               No cold pitching. No client chasing. No unpaid quotes. Just open your dashboard, accept a gig, deliver great work, and get paid. Simple.
             </SectionP>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 32 }}>
-            <FeatureCard icon="💸" title="75% Earnings" desc="You keep 75% of every gig. Weekly payouts straight to your bank account." />
-            <FeatureCard icon="🕐" title="Work When You Want" desc="Go online when you're available, go offline when you're not. No minimums, no schedules." />
-            <FeatureCard icon="📈" title="Build Your Rep" desc="Every delivery earns you ratings. Higher ratings = more gigs = more money." />
-            <FeatureCard icon="🎯" title="Matched to Your Skills" desc="Only see gigs that match your skillset. No wasted time on work you don't do." />
+            {[
+              { icon: "💸", title: "75% Earnings", desc: "You keep 75% of every gig. Weekly payouts straight to your bank account." },
+              { icon: "🕐", title: "Work When You Want", desc: "Go online when you're available, go offline when you're not. No minimums, no schedules." },
+              { icon: "📈", title: "Build Your Rep", desc: "Every delivery earns you ratings. Higher ratings = more gigs = more money." },
+              { icon: "🎯", title: "Matched to Your Skills", desc: "Only see gigs that match your skillset. No wasted time on work you don't do." },
+            ].map(f => (
+              <Card key={f.title} style={{ padding: 24, flex: "1 1 200px", borderTop: `2px solid ${X.teal}` }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
+                <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>{f.title}</div>
+                <T dim sm>{f.desc}</T>
+              </Card>
+            ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
             {[
@@ -279,13 +289,13 @@ const Landing = ({ go }) => {
               { v: "Weekly", l: "Payouts" },
             ].map(s => (
               <Card key={s.l} style={{ textAlign: "center", padding: 16 }}>
-                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: X.orange }}>{s.v}</div>
+                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: X.teal }}>{s.v}</div>
                 <T sm dim>{s.l}</T>
               </Card>
             ))}
           </div>
           <div style={{ textAlign: "center" }}>
-            <Btn onClick={() => go("designer-register")} style={{ padding: "14px 32px", fontSize: 15 }}>Apply as a Designer →</Btn>
+            <Btn onClick={() => go("designer-register")} style={{ padding: "14px 32px", fontSize: 15, background: X.teal, color: X.bg }}>Apply as a Designer →</Btn>
             <T dim sm style={{ marginTop: 10 }}>Free to join · Takes 2 minutes · Start earning today</T>
           </div>
         </Section>
@@ -297,7 +307,7 @@ const Landing = ({ go }) => {
           <div style={{ textAlign: "center", marginBottom: 28 }}>
             <SectionLabel>Pricing</SectionLabel>
             <SectionH>Transparent pricing. No surprises.</SectionH>
-            <SectionP style={{ margin: "0 auto" }}>20 services across 4 categories. All prices in ZAR, excl. VAT.</SectionP>
+            <SectionP style={{ margin: "0 auto" }}>20 services across 4 categories. All prices in ZAR.</SectionP>
           </div>
           {Object.entries(SERVICES).map(([cat, items]) => (
             <div key={cat} style={{ marginBottom: 6 }}>
@@ -331,7 +341,7 @@ const Landing = ({ go }) => {
           </SectionP>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
             <Btn onClick={() => go("customer-login")} style={{ padding: "14px 28px", fontSize: 15 }}>Submit a Gig →</Btn>
-            <Btn v="ghost" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15 }}>Join as Designer</Btn>
+            <Btn v="ghost" onClick={() => go("designer-register")} style={{ padding: "14px 28px", fontSize: 15, color: X.teal, borderColor: X.tealBorder }}>Join as Designer</Btn>
           </div>
         </Section>
       </div>
@@ -399,7 +409,7 @@ const FileSection = ({ gigId, role, userId, label, uploadRole, files, onRefresh 
           <T sm dim>({filtered.length})</T>
         </div>
         {canUpload && (
-          <label style={{ cursor: uploading ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, background: uploadRole === "designer" ? X.green + "18" : X.orangeDim, color: uploadRole === "designer" ? X.green : X.orange, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${uploadRole === "designer" ? X.green + "30" : X.orangeBorder}` }}>
+          <label style={{ cursor: uploading ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, background: uploadRole === "designer" ? X.tealDim : X.orangeDim, color: uploadRole === "designer" ? X.teal : X.orange, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, border: `1px solid ${uploadRole === "designer" ? X.tealBorder : X.orangeBorder}` }}>
             {uploading ? "Uploading..." : "＋ Upload"}
             <input type="file" onChange={handleUpload} style={{ display: "none" }} disabled={uploading} />
           </label>
@@ -795,14 +805,17 @@ const DesDash = ({ designer, onAccept, onDeliver }) => {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <Av text={designer.avatar_initials || "?"} s={48} on={designer.is_online} />
+        <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${X.teal}, ${X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 17, color: X.bg, position: "relative" }}>
+          {designer.avatar_initials || "?"}
+          {designer.is_online && <span style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: X.green, border: `2px solid ${X.card}` }} />}
+        </div>
         <div style={{ flex: 1 }}><H s={18}>{designer.name}</H><div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><Stars n={designer.rating || 0} s={13} /><T sm dim>{designer.rating || "New"} · {designer.total_reviews || 0} reviews</T></div></div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
-        {[{ l: "Completed", v: designer.completed_gigs || 0 }, { l: "Rating", v: (designer.rating || 0) + "★" }, { l: "Earned", v: `R${Math.round(earned).toLocaleString()}` }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
+        {[{ l: "Completed", v: designer.completed_gigs || 0 }, { l: "Rating", v: (designer.rating || 0) + "★" }, { l: "Earned", v: `R${Math.round(earned).toLocaleString()}` }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 12 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.teal }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}
       </div>
       <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
-        {tabs.map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.orangeDim : "transparent", color: tab === t.k ? X.orange : X.gray }}>{t.l}</button>)}
+        {tabs.map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "Outfit", fontWeight: 600, fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === t.k ? X.tealDim : "transparent", color: tab === t.k ? X.teal : X.gray }}>{t.l}</button>)}
       </div>
       {list.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>Nothing here yet</T></Card> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -828,8 +841,9 @@ const DesRegForm = ({ go, onReg }) => {
         <Nav go={go} minimal />
         <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}>
           <button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 4, margin: "0 auto 16px" }}>← Back</button>
-          <H s={22}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
-        <Card>
+          <Pill color={X.teal}>Designer</Pill>
+          <H s={22} style={{ marginTop: 8 }}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
+        <Card style={{ borderTop: `2px solid ${X.teal}` }}>
           <Field label="Full Name" value={name} onChange={setName} placeholder="Thando Mokoena" />
           <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
           <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
@@ -837,11 +851,11 @@ const DesRegForm = ({ go, onReg }) => {
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.orangeDim : X.bg, color: skills.includes(s.name) ? X.orange : X.gray, border: `1px solid ${skills.includes(s.name) ? X.orangeBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
+              {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.tealDim : X.bg, color: skills.includes(s.name) ? X.teal : X.gray, border: `1px solid ${skills.includes(s.name) ? X.tealBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
             </div>
           </div>
-          <Btn full onClick={() => { if (name && email && skills.length) onReg({ name, email, city, bio, skills }); }} disabled={!name || !email || !skills.length}>Apply Now →</Btn>
-          <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => go("designer-login")} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Already registered? Sign in →</button></div>
+          <Btn full onClick={() => { if (name && email && skills.length) onReg({ name, email, city, bio, skills }); }} disabled={!name || !email || !skills.length} style={{ background: X.teal, color: X.bg }}>Apply Now →</Btn>
+          <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => go("designer-login")} style={{ background: "none", border: "none", color: X.teal, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Already registered? Sign in →</button></div>
         </Card>
       </div>
     </div>
@@ -947,7 +961,7 @@ const AuthScreen = ({ go, onAuth, mode: initMode, role: initRole }) => {
               {["customer", "designer"].map(r => (
                 <button key={r} onClick={() => setRole(r)} style={{
                   flex: 1, padding: "8px", borderRadius: 6, border: "none", fontFamily: "Outfit", fontWeight: 600, fontSize: 12, cursor: "pointer",
-                  background: role === r ? X.orange : "transparent", color: role === r ? X.bg : X.gray, textTransform: "capitalize",
+                  background: role === r ? (r === "designer" ? X.teal : X.orange) : "transparent", color: role === r ? X.bg : X.gray, textTransform: "capitalize",
                 }}>{r === "customer" ? "I need design" : "I'm a designer"}</button>
               ))}
             </div>
@@ -967,18 +981,18 @@ const AuthScreen = ({ go, onAuth, mode: initMode, role: initRole }) => {
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                    {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.orangeDim : X.bg, color: skills.includes(s.name) ? X.orange : X.gray, border: `1px solid ${skills.includes(s.name) ? X.orangeBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
+                    {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.tealDim : X.bg, color: skills.includes(s.name) ? X.teal : X.gray, border: `1px solid ${skills.includes(s.name) ? X.tealBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
                   </div>
                 </div>
               </>
             )}
 
-            <Btn full onClick={handleSubmit} disabled={loading || !email || !password || (mode === "signup" && !name)}>
+            <Btn full onClick={handleSubmit} disabled={loading || !email || !password || (mode === "signup" && !name)} style={role === "designer" ? { background: X.teal, color: X.bg } : {}}>
               {loading ? "Please wait..." : mode === "login" ? "Sign In →" : "Create Account →"}
             </Btn>
 
             <div style={{ textAlign: "center", marginTop: 14 }}>
-              <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>
+              <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }} style={{ background: "none", border: "none", color: role === "designer" ? X.teal : X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>
                 {mode === "login" ? "Don't have an account? Sign up →" : "Already have an account? Sign in →"}
               </button>
             </div>
@@ -1100,7 +1114,7 @@ export default function App() {
       <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}>
         <span onClick={() => setPg("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Pill color={role === "designer" ? X.green : X.orange}>{role}</Pill>
+          <Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill>
           <button onClick={logout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button>
         </div>
       </nav>
