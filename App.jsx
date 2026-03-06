@@ -311,32 +311,197 @@ const GigCard = ({ gig, designer, rating, isCust, onAccept, onDeliver, onRate, u
 
 // ─── CREATE GIG ─────────────────────────────────────────────────────────────
 const CreateGig = ({ onSubmit, onBack }) => {
-  const [cat, setCat] = useState("");
-  const [svc, setSvc] = useState("");
+  const [selected, setSelected] = useState([]); // array of service names
   const [brief, setBrief] = useState("");
   const [tier, setTier] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [openCats, setOpenCats] = useState([]);
 
-  const sel = ALL_SERVICES.find(s => s.name === svc);
-  const price = sel && tier ? sel.prices[tier] : null;
+  const toggleCat = c => setOpenCats(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
+  const toggleSvc = name => setSelected(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
 
-  const go = () => { setLoading(true); onSubmit({ service: svc, category: cat, brief, turnaround: parseInt(tier), price }); };
+  // Calculate total price for selected services at chosen tier
+  const getTotal = (t) => {
+    if (!t) return 0;
+    return selected.reduce((sum, name) => {
+      const svc = ALL_SERVICES.find(s => s.name === name);
+      return sum + (svc ? svc.prices[t] : 0);
+    }, 0);
+  };
+
+  const total = getTotal(tier);
+  const serviceLabel = selected.length === 1 ? selected[0] : `${selected.length} services`;
+  const category = selected.length > 0 ? Object.entries(SERVICES).find(([, items]) => items.some(i => i.name === selected[0]))?.[0] || "" : "";
+
+  const go = () => {
+    setLoading(true);
+    onSubmit({
+      service: selected.join(" + "),
+      services: selected,
+      category,
+      brief,
+      turnaround: parseInt(tier),
+      price: total,
+    });
+  };
 
   if (loading) return <Spinner text="Finding your designer..." />;
 
   return (
-    <div style={{ maxWidth: 460, margin: "0 auto" }}>
+    <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back</button>
       <H s={22}>Submit a Gig</H>
-      <T dim style={{ marginBottom: 20 }}>Tell us what you need</T>
-      <div style={{ display: "flex", gap: 5, marginBottom: 24 }}>{[1,2,3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= step ? X.orange : X.border }} />)}</div>
+      <T dim style={{ marginBottom: 20 }}>Select one or more services</T>
+      <div style={{ display: "flex", gap: 5, marginBottom: 24 }}>
+        {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= step ? X.orange : X.border }} />)}
+      </div>
 
-      {step === 1 && <div><H s={15} style={{ marginBottom: 10 }}>Category</H><div style={{ display: "flex", flexDirection: "column", gap: 5 }}>{Object.keys(SERVICES).map(c => <button key={c} onClick={() => { setCat(c); setSvc(""); setStep(2); }} style={{ padding: "11px 14px", borderRadius: 8, textAlign: "left", background: cat === c ? X.orangeDim : X.card, border: `1px solid ${cat === c ? X.orangeBorder : X.border}`, color: cat === c ? X.orange : X.white, fontFamily: "Inter", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{c}</button>)}</div></div>}
+      {/* Step 1: Pick services (multi-select across all categories) */}
+      {step === 1 && (
+        <div>
+          <H s={15} style={{ marginBottom: 10 }}>What do you need?</H>
+          <T dim sm style={{ marginBottom: 14 }}>Select all that apply — prices shown are for 24h turnaround</T>
 
-      {step === 2 && <div><H s={15} style={{ marginBottom: 10 }}>{cat}</H><div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>{SERVICES[cat]?.map(s => <button key={s.name} onClick={() => setSvc(s.name)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", borderRadius: 8, background: svc === s.name ? X.orangeDim : X.card, border: `1px solid ${svc === s.name ? X.orangeBorder : X.border}`, color: svc === s.name ? X.orange : X.white, fontFamily: "Inter", fontSize: 13, cursor: "pointer" }}><span>{s.name}</span><span style={{ color: X.gray, fontSize: 11 }}>from R{s.prices[24].toLocaleString()}</span></button>)}</div><Field label="Brief (optional)" value={brief} onChange={setBrief} textarea placeholder="Describe what you need..." /><div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => setStep(1)}>Back</Btn><Btn sm onClick={() => setStep(3)} disabled={!svc}>Next →</Btn></div></div>}
+          {Object.entries(SERVICES).map(([cat, items]) => (
+            <div key={cat} style={{ marginBottom: 6 }}>
+              <button onClick={() => toggleCat(cat)} style={{
+                width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "11px 14px", background: X.card, border: `1px solid ${X.border}`,
+                borderRadius: openCats.includes(cat) ? "8px 8px 0 0" : 8,
+                color: X.white, fontFamily: "Outfit", fontWeight: 600, fontSize: 13, cursor: "pointer",
+              }}>
+                <span>{cat}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {selected.some(s => items.some(i => i.name === s)) && (
+                    <Pill color={X.green}>{selected.filter(s => items.some(i => i.name === s)).length} selected</Pill>
+                  )}
+                  <span style={{ color: X.gray, fontSize: 14, transition: "transform 0.2s", transform: openCats.includes(cat) ? "rotate(180deg)" : "none" }}>▾</span>
+                </div>
+              </button>
+              {openCats.includes(cat) && (
+                <div style={{ border: `1px solid ${X.border}`, borderTop: "none", borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                  {items.map((item, i) => {
+                    const isSelected = selected.includes(item.name);
+                    return (
+                      <button key={item.name} onClick={() => toggleSvc(item.name)} style={{
+                        width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "10px 14px", background: isSelected ? X.orangeDim : (i % 2 === 0 ? X.card : "transparent"),
+                        border: "none", borderTop: i > 0 ? `1px solid ${X.border}` : "none",
+                        cursor: "pointer", transition: "all 0.15s",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{
+                            width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                            border: `2px solid ${isSelected ? X.orange : X.border}`,
+                            background: isSelected ? X.orange : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, color: X.bg, fontWeight: 800,
+                          }}>{isSelected ? "✓" : ""}</div>
+                          <span style={{ fontFamily: "Inter", fontSize: 13, color: isSelected ? X.orange : X.white }}>{item.name}</span>
+                        </div>
+                        <span style={{ fontFamily: "Outfit", fontSize: 12, color: X.grayLight }}>R{item.prices[24].toLocaleString()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
 
-      {step === 3 && <div><H s={15} style={{ marginBottom: 10 }}>Turnaround</H><div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>{Object.entries(TIERS).map(([h, { tag }]) => { const p = sel?.prices[h]; return <button key={h} onClick={() => setTier(h)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 14px", borderRadius: 8, background: tier === h ? X.orangeDim : X.card, border: tier === h ? `2px solid ${X.orange}` : `1px solid ${X.border}`, cursor: "pointer" }}><div style={{ textAlign: "left" }}><div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 14, color: X.white, marginBottom: 2 }}>{h} Hours</div><Pill color={h === "4" ? X.red : h === "12" ? X.yellow : X.green}>{tag}</Pill></div><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>R{p?.toLocaleString()}</div></button>; })}</div>{tier && <Card style={{ marginBottom: 14, background: X.bg, padding: 14 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><T dim sm>Service</T><T sm style={{ color: X.white }}>{svc}</T></div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><T dim sm>Turnaround</T><T sm style={{ color: X.white }}>{tier}h — {TIERS[tier]?.tag}</T></div><div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${X.border}`, paddingTop: 6, marginTop: 6 }}><T style={{ color: X.white, fontWeight: 600 }}>Total</T><span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.orange }}>R{price?.toLocaleString()}</span></div></Card>}<div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => setStep(2)}>Back</Btn><Btn sm onClick={go} disabled={!tier}>Submit Gig →</Btn></div></div>}
+          {/* Selected summary */}
+          {selected.length > 0 && (
+            <Card style={{ marginTop: 14, padding: 14, background: X.bg }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <T sm style={{ color: X.white, fontWeight: 600 }}>{selected.length} service{selected.length > 1 ? "s" : ""} selected</T>
+                <button onClick={() => setSelected([])} style={{ background: "none", border: "none", color: X.red, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer" }}>Clear all</button>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {selected.map(s => (
+                  <span key={s} onClick={() => toggleSvc(s)} style={{
+                    padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter",
+                    background: X.orangeDim, color: X.orange, border: `1px solid ${X.orangeBorder}`,
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
+                  }}>{s} ✕</span>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+            <Btn sm onClick={() => setStep(2)} disabled={selected.length === 0}>Next →</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Brief */}
+      {step === 2 && (
+        <div>
+          <H s={15} style={{ marginBottom: 4 }}>Project brief</H>
+          <T dim sm style={{ marginBottom: 14 }}>Tell the designer what you need for: {serviceLabel}</T>
+          <Field label="Brief" value={brief} onChange={setBrief} textarea placeholder="Describe what you need — colors, style, dimensions, references..." />
+          <div style={{ display: "flex", gap: 6 }}>
+            <Btn v="ghost" sm onClick={() => setStep(1)}>Back</Btn>
+            <Btn sm onClick={() => setStep(3)}>Next →</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Turnaround + order summary */}
+      {step === 3 && (
+        <div>
+          <H s={15} style={{ marginBottom: 10 }}>Choose turnaround</H>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+            {Object.entries(TIERS).map(([h, { tag }]) => {
+              const tierTotal = getTotal(h);
+              return (
+                <button key={h} onClick={() => setTier(h)} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "13px 14px", borderRadius: 8,
+                  background: tier === h ? X.orangeDim : X.card,
+                  border: tier === h ? `2px solid ${X.orange}` : `1px solid ${X.border}`,
+                  cursor: "pointer",
+                }}>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 14, color: X.white, marginBottom: 2 }}>{h} Hours</div>
+                    <Pill color={h === "4" ? X.red : h === "12" ? X.yellow : X.green}>{tag}</Pill>
+                  </div>
+                  <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>R{tierTotal.toLocaleString()}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Order summary */}
+          {tier && (
+            <Card style={{ marginBottom: 14, background: X.bg, padding: 14 }}>
+              <T dim sm style={{ marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Order Summary</T>
+              {selected.map(name => {
+                const svc = ALL_SERVICES.find(s => s.name === name);
+                return (
+                  <div key={name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <T sm style={{ color: X.grayLight }}>{name}</T>
+                    <T sm style={{ color: X.white }}>R{svc?.prices[tier]?.toLocaleString()}</T>
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, paddingTop: 4 }}>
+                <T dim sm>Turnaround</T>
+                <T sm style={{ color: X.white }}>{tier}h — {TIERS[tier]?.tag}</T>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${X.border}`, paddingTop: 8, marginTop: 8 }}>
+                <T style={{ color: X.white, fontWeight: 700 }}>Total</T>
+                <span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>R{total.toLocaleString()}</span>
+              </div>
+            </Card>
+          )}
+
+          <div style={{ display: "flex", gap: 6 }}>
+            <Btn v="ghost" sm onClick={() => setStep(2)}>Back</Btn>
+            <Btn sm onClick={go} disabled={!tier}>Submit Gig — R{total.toLocaleString()} →</Btn>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -430,6 +595,39 @@ const DesDash = ({ designer, onAccept, onDeliver }) => {
           {list.map(g => <GigCard key={g.id} gig={g} onAccept={onAccept} onDeliver={onDeliver} userId={designer.id} />)}
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── DESIGNER REGISTER FORM ─────────────────────────────────────────────────
+const DesRegForm = ({ go, onReg }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [city, setCity] = useState("");
+  const [bio, setBio] = useState("");
+  const [skills, setSkills] = useState([]);
+  const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
+
+  return (
+    <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ maxWidth: 460, width: "100%" }}>
+        <Nav go={go} minimal />
+        <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}><H s={22}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
+        <Card>
+          <Field label="Full Name" value={name} onChange={setName} placeholder="Thando Mokoena" />
+          <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
+          <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
+          <Field label="Short Bio" value={bio} onChange={setBio} textarea placeholder="What makes your work stand out..." />
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.orangeDim : X.bg, color: skills.includes(s.name) ? X.orange : X.gray, border: `1px solid ${skills.includes(s.name) ? X.orangeBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
+            </div>
+          </div>
+          <Btn full onClick={() => { if (name && email && skills.length) onReg({ name, email, city, bio, skills }); }} disabled={!name || !email || !skills.length}>Apply Now →</Btn>
+          <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => go("designer-login")} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Already registered? Sign in →</button></div>
+        </Card>
+      </div>
     </div>
   );
 };
@@ -549,38 +747,7 @@ export default function App() {
 
       {pg === "create-gig" && customer && <Shell role="customer" go={setPg}><CreateGig onSubmit={createGig} onBack={() => setPg("customer-dash")} /></Shell>}
 
-      {pg === "designer-register" && (
-        <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ maxWidth: 460, width: "100%" }}>
-            <Nav go={setPg} minimal />
-            <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 80 }}><H s={22}>Join as a Designer</H><T dim style={{ marginTop: 4 }}>Earn money doing what you love</T></div>
-            <Card>
-              {(() => {
-                const [name, setName] = useState("");
-                const [email, setEmail] = useState("");
-                const [city, setCity] = useState("");
-                const [bio, setBio] = useState("");
-                const [skills, setSkills] = useState([]);
-                const flip = s => setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
-                return <>
-                  <Field label="Full Name" value={name} onChange={setName} placeholder="Thando Mokoena" />
-                  <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@email.com" />
-                  <Field label="City" value={city} onChange={setCity} placeholder="Johannesburg" />
-                  <Field label="Short Bio" value={bio} onChange={setBio} textarea placeholder="What makes your work stand out..." />
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>Skills</label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      {ALL_SERVICES.map(s => <button key={s.name} onClick={() => flip(s.name)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontFamily: "Inter", background: skills.includes(s.name) ? X.orangeDim : X.bg, color: skills.includes(s.name) ? X.orange : X.gray, border: `1px solid ${skills.includes(s.name) ? X.orangeBorder : X.border}`, cursor: "pointer" }}>{s.name}</button>)}
-                    </div>
-                  </div>
-                  <Btn full onClick={() => { if (name && email && skills.length) desRegister({ name, email, city, bio, skills }); }} disabled={!name || !email || !skills.length}>Apply Now →</Btn>
-                  <div style={{ textAlign: "center", marginTop: 12 }}><button onClick={() => setPg("designer-login")} style={{ background: "none", border: "none", color: X.orange, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Already registered? Sign in →</button></div>
-                </>;
-              })()}
-            </Card>
-          </div>
-        </div>
-      )}
+      {pg === "designer-register" && <DesRegForm go={setPg} onReg={desRegister} />}
 
       {pg === "designer-login" && (
         <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
