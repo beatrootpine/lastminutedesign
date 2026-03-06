@@ -13,6 +13,42 @@ export default async function handler(req, res) {
   if (!SUPA || !KEY) return res.status(500).json({ error: "Supabase not configured" });
 
   const { action } = req.method === "GET" ? req.query : req.body;
+
+  // Email helper — fire and forget
+  const notify = async (type, data) => {
+    try {
+      const SENDGRID_KEY = process.env.SENDGRID_API_KEY;
+      const FROM = process.env.SENDGRID_FROM_EMAIL;
+      if (!SENDGRID_KEY || !FROM || !data.to) return;
+
+      const subjects = {
+        gig_accepted: `A designer has accepted your gig: ${data.service || ""}`,
+        new_message: `New message on your ${data.service || ""} gig`,
+        file_uploaded: `New file uploaded to your ${data.service || ""} gig`,
+        gig_delivered: `Your ${data.service || ""} design is ready to review`,
+        new_rating: `You received a ${data.rating || ""}★ rating`,
+      };
+
+      const bodies = {
+        gig_accepted: `<p>Hi ${data.customerName || "there"},</p><p><strong>${data.designerName}</strong> has accepted your <strong>${data.service}</strong> gig and is working on it now.</p><p>Turnaround: <strong>${data.turnaround}h</strong></p><p><a href="https://lastminutedesigns.co.za">View your dashboard →</a></p>`,
+        new_message: `<p>Hi ${data.recipientName || "there"},</p><p><strong>${data.senderName}</strong> sent a message on your <strong>${data.service}</strong> gig:</p><p style="padding:12px;background:#f5f5f5;border-radius:8px;color:#333">"${(data.message || "").slice(0, 200)}"</p><p><a href="https://lastminutedesigns.co.za">Reply now →</a></p>`,
+        file_uploaded: `<p>Hi ${data.recipientName || "there"},</p><p><strong>${data.uploaderName}</strong> uploaded a file to your <strong>${data.service}</strong> gig:</p><p>📎 <strong>${data.fileName || "file"}</strong></p><p><a href="https://lastminutedesigns.co.za">View files →</a></p>`,
+        gig_delivered: `<p>Hi ${data.customerName || "there"},</p><p><strong>${data.designerName}</strong> has delivered your <strong>${data.service}</strong> design.</p><p>Head to your dashboard to review, accept, and rate.</p><p><a href="https://lastminutedesigns.co.za">Review now →</a></p>`,
+        new_rating: `<p>Hi ${data.designerName || "there"},</p><p>You received a <strong>${data.rating}★</strong> rating for <strong>${data.service}</strong>.</p>${data.feedback ? `<p>"${data.feedback}"</p>` : ""}<p><a href="https://lastminutedesigns.co.za">View dashboard →</a></p>`,
+      };
+
+      await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SENDGRID_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: data.to }] }],
+          from: { email: FROM, name: "Last Minute Designs" },
+          subject: subjects[type] || "Update on your gig",
+          content: [{ type: "text/html", value: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">${bodies[type] || ""}<hr style="border:none;border-top:1px solid #eee;margin:20px 0"><p style="color:#999;font-size:11px">Last Minute Designs · lastminutedesigns.co.za</p></div>` }],
+        }),
+      });
+    } catch (e) { console.error("Notify error:", e.message); }
+  };
   if (!action) return res.status(400).json({ error: "Missing action" });
 
   // Helper: query Supabase REST API
@@ -104,12 +140,26 @@ export default async function handler(req, res) {
         const { gig_id, designer_id, turnaround } = req.body;
         const deadline = new Date(Date.now() + turnaround * 3600000).toISOString();
         await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { designer_id, status: "in_progress", deadline } });
+        // Notify customer
+        const agig = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        if (agig?.[0]?.customer_id) {
+          const acust = await db(`customers?id=eq.${agig[0].customer_id}&limit=1`);
+          const ades = await db(`designers?id=eq.${designer_id}&limit=1`);
+          if (acust?.[0] && ades?.[0]) notify("gig_accepted", { to: acust[0].email, customerName: acust[0].name, designerName: ades[0].name, service: agig[0].service, turnaround });
+        }
         return res.json({ success: true });
       }
 
       case "deliver_gig": {
         const { gig_id } = req.body;
         await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "delivered", delivered_at: new Date().toISOString() } });
+        // Notify customer
+        const dgig = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        if (dgig?.[0]?.customer_id) {
+          const dcust = await db(`customers?id=eq.${dgig[0].customer_id}&limit=1`);
+          const ddes = dgig[0].designer_id ? await db(`designers?id=eq.${dgig[0].designer_id}&limit=1`) : [];
+          if (dcust?.[0]) notify("gig_delivered", { to: dcust[0].email, customerName: dcust[0].name, designerName: ddes?.[0]?.name || "Your designer", service: dgig[0].service });
+        }
         return res.json({ success: true });
       }
 
@@ -117,6 +167,10 @@ export default async function handler(req, res) {
         const { gig_id, customer_id, designer_id, score, feedback } = req.body;
         await db("ratings", { method: "POST", body: { gig_id, customer_id, designer_id, score, feedback } });
         await db(`gigs?id=eq.${gig_id}`, { method: "PATCH", body: { status: "completed", completed_at: new Date().toISOString() } });
+        // Notify designer
+        const rgig = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        const rdes = await db(`designers?id=eq.${designer_id}&limit=1`);
+        if (rdes?.[0]) notify("new_rating", { to: rdes[0].email, designerName: rdes[0].name, service: rgig?.[0]?.service || "", rating: score, feedback });
         return res.json({ success: true });
       }
 
@@ -129,6 +183,19 @@ export default async function handler(req, res) {
       case "register_file": {
         const { gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type } = req.body;
         const f = await db("files", { method: "POST", body: { gig_id, uploaded_by_role, uploaded_by_id, file_name, file_path, file_size, file_type } });
+        // Notify the other party
+        const fgig = await db(`gigs?id=eq.${gig_id}&limit=1`);
+        if (fgig?.[0]) {
+          if (uploaded_by_role === "designer" && fgig[0].customer_id) {
+            const fcust = await db(`customers?id=eq.${fgig[0].customer_id}&limit=1`);
+            const fdes = await db(`designers?id=eq.${uploaded_by_id}&limit=1`);
+            if (fcust?.[0]) notify("file_uploaded", { to: fcust[0].email, recipientName: fcust[0].name, uploaderName: fdes?.[0]?.name || "Your designer", service: fgig[0].service, fileName: file_name });
+          } else if (uploaded_by_role === "customer" && fgig[0].designer_id) {
+            const fdes2 = await db(`designers?id=eq.${fgig[0].designer_id}&limit=1`);
+            const fcust2 = await db(`customers?id=eq.${uploaded_by_id}&limit=1`);
+            if (fdes2?.[0]) notify("file_uploaded", { to: fdes2[0].email, recipientName: fdes2[0].name, uploaderName: fcust2?.[0]?.name || "Your client", service: fgig[0].service, fileName: file_name });
+          }
+        }
         return res.json({ file: f[0] });
       }
 
@@ -184,6 +251,17 @@ export default async function handler(req, res) {
       case "add_comment": {
         const { gig_id: acGigId, author_id, author_role, author_name, message } = req.body;
         const c = await db("comments", { method: "POST", body: { gig_id: acGigId, author_id, author_role, author_name, message } });
+        // Notify the other party
+        const cgig = await db(`gigs?id=eq.${acGigId}&limit=1`);
+        if (cgig?.[0]) {
+          if (author_role === "designer" && cgig[0].customer_id) {
+            const ccust = await db(`customers?id=eq.${cgig[0].customer_id}&limit=1`);
+            if (ccust?.[0]) notify("new_message", { to: ccust[0].email, recipientName: ccust[0].name, senderName: author_name, service: cgig[0].service, message });
+          } else if (author_role === "customer" && cgig[0].designer_id) {
+            const cdes = await db(`designers?id=eq.${cgig[0].designer_id}&limit=1`);
+            if (cdes?.[0]) notify("new_message", { to: cdes[0].email, recipientName: cdes[0].name, senderName: author_name, service: cgig[0].service, message });
+          }
+        }
         return res.json({ comment: c[0] });
       }
 
