@@ -174,6 +174,32 @@ export default async function handler(req, res) {
         return res.json({ total: Math.round(total), thisMonth: Math.round(thisMonth), thisWeek: Math.round(thisWeek), gigCount: gigs.length, gigs });
       }
 
+      // ─── COMMENTS ─────────────────────────────────────────────
+      case "get_comments": {
+        const { gig_id: cGigId } = req.query;
+        const comments = await db(`comments?gig_id=eq.${cGigId}&order=created_at.asc`);
+        return res.json({ comments });
+      }
+
+      case "add_comment": {
+        const { gig_id: acGigId, author_id, author_role, author_name, message } = req.body;
+        const c = await db("comments", { method: "POST", body: { gig_id: acGigId, author_id, author_role, author_name, message } });
+        return res.json({ comment: c[0] });
+      }
+
+      // ─── SUPPORT ──────────────────────────────────────────────
+      case "send_support": {
+        const { user_id, user_role, user_name, user_email, subject, message } = req.body;
+        const s = await db("support_messages", { method: "POST", body: { user_id, user_role, user_name, user_email, subject, message } });
+        return res.json({ ticket: s[0] });
+      }
+
+      case "get_support_tickets": {
+        const { user_id: sUid } = req.query;
+        const tickets = await db(`support_messages?user_id=eq.${sUid}&order=created_at.desc`);
+        return res.json({ tickets });
+      }
+
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
