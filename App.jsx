@@ -36,7 +36,7 @@ const ALL_SERVICES = Object.values(SERVICES).flat();
 const TIERS = {
   4: { label: "4 Hours", tag: "RUSH", desc: "Ultra-priority. Work starts immediately." },
   12: { label: "12 Hours", tag: "EXPRESS", desc: "Same-day delivery. Starts within 2 hours." },
-  24: { label: "24+ Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
+  24: { label: "24 Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
 };
 
 // ─── API HELPER ─────────────────────────────────────────────────────────────
@@ -66,7 +66,6 @@ const sendEmail = async (type, data) => {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#09090b;color:#fafafa;font-family:Inter,sans-serif}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
 ::selection{background:#f97316;color:#09090b}
@@ -75,15 +74,30 @@ body{background:#09090b;color:#fafafa;font-family:Inter,sans-serif}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 `;
 
-const X = {
-  bg: "#09090b", card: "#131316", border: "#1e1e24",
+const themes = {
+  dark: {
+    bg: "#09090b", card: "#131316", border: "#1e1e24", hover: "#1a1a1f",
+    white: "#fafafa", gray: "#71717a", grayLight: "#a1a1aa",
+    navBg: "rgba(9,9,11,0.85)", cardBg: "#131316",
+  },
+  light: {
+    bg: "#f8f8fa", card: "#ffffff", border: "#e4e4e7", hover: "#f0f0f2",
+    white: "#09090b", gray: "#71717a", grayLight: "#52525b",
+    navBg: "rgba(255,255,255,0.9)", cardBg: "#ffffff",
+  },
+};
+
+const accents = {
   orange: "#f97316", orangeLight: "#fb923c",
   orangeDim: "rgba(249,115,22,0.1)", orangeBorder: "rgba(249,115,22,0.2)",
   teal: "#06b6d4", tealLight: "#22d3ee",
   tealDim: "rgba(6,182,212,0.1)", tealBorder: "rgba(6,182,212,0.2)",
-  white: "#fafafa", gray: "#71717a", grayLight: "#a1a1aa",
   green: "#22c55e", red: "#ef4444", yellow: "#eab308",
 };
+
+// Theme context — mutable reference
+let X = { ...themes.dark, ...accents };
+const setTheme = (t) => { Object.assign(X, themes[t], accents); };
 
 // ─── UI PRIMITIVES ──────────────────────────────────────────────────────────
 const H = ({ children, s = 24, style }) => <h2 style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: s, color: X.white, letterSpacing: "-0.02em", lineHeight: 1.2, ...style }}>{children}</h2>;
@@ -377,7 +391,7 @@ const Landing = ({ go }) => {
         <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
           <span style={{ color: X.orange }}>lastminute</span>.design
         </div>
-        <T dim sm>Owned by Branded SA Corporation · Proudly South African</T>
+        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
         <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
         <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
       </div>
@@ -962,13 +976,13 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => setShowCreate(true)}>+ New Gig</Btn>}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
               {gigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No projects yet</T>{isCust && <Btn sm onClick={() => setShowCreate(true)} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right" }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T></div></div></Card>)}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: accent, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>
               )}
             </div>
           )}
 
           {!loading && !showCreate && !selectedGig && section === "available" && !isCust && (
-            <div><H s={20} style={{ marginBottom: 16 }}>Available Gigs</H>{availGigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No gigs right now</T></Card> : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{availGigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={X.yellow}>New</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T></div><div style={{ textAlign: "right" }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.teal }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</div><T sm dim>your earnings</T></div></div></Card>)}</div>}</div>
+            <div><H s={20} style={{ marginBottom: 16 }}>Available Gigs</H>{availGigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No gigs right now</T></Card> : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{availGigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={X.yellow}>New</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,80)}{g.brief.length>80?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.teal }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</div><T sm dim>your earnings</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: X.teal, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>}</div>
           )}
 
           {!loading && !showCreate && !selectedGig && section === "profile" && isCust && <CustProfile customer={profile} onUpdate={onUpdateProfile} />}
@@ -1097,7 +1111,25 @@ const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 export default function App() {
   const [pg, setPg] = useState("landing"); const [toast, setToast] = useState(null); const [profile, setProfile] = useState(null); const [role, setRole] = useState(null); const [rateGig, setRateGig] = useState(null);
+  const [theme, setThemeState] = useState(() => localStorage.getItem("lmd_theme") || "dark");
   const note = m => setToast(m);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setThemeState(next);
+    setTheme(next);
+    localStorage.setItem("lmd_theme", next);
+  };
+
+  // Apply theme on load
+  useEffect(() => { setTheme(theme); }, []);
+
+  // Force re-render when theme changes
+  useEffect(() => {
+    setTheme(theme);
+    document.body.style.background = X.bg;
+    document.body.style.color = X.white;
+  }, [theme]);
 
   useEffect(() => {
     const s = localStorage.getItem("lmd_session");
@@ -1147,9 +1179,20 @@ export default function App() {
   const rateSubmit = async (score, fb) => { if (!rateGig) return; await api("rate_gig", { gig_id: rateGig.id, customer_id: profile.id, designer_id: rateGig.designer_id, score, feedback: fb }); setRateGig(null); note("Thanks for rating!"); };
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", color: X.white, background: X.bg, minHeight: "100vh" }}>
-      <style>{CSS}</style>
+    <div style={{ fontFamily: "Inter, sans-serif", color: X.white, background: X.bg, minHeight: "100vh", transition: "background 0.3s, color 0.3s" }}>
+      <style>{CSS}{`body{background:${X.bg};color:${X.white};transition:background 0.3s,color 0.3s}`}</style>
       {toast && <Toasty msg={toast} onClose={() => setToast(null)} />}
+
+      {/* Theme toggle — fixed bottom right */}
+      <button onClick={toggleTheme} style={{
+        position: "fixed", bottom: 20, right: 20, zIndex: 9999,
+        width: 40, height: 40, borderRadius: "50%",
+        background: X.card, border: `1px solid ${X.border}`,
+        color: X.white, fontSize: 18, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.2)", transition: "all 0.3s",
+      }}>{theme === "dark" ? "☀️" : "🌙"}</button>
+
       {pg === "landing" && <Landing go={setPg} />}
       {pg === "customer-login" && <AuthScreen go={setPg} onAuth={handleAuth} mode="login" role="customer" />}
       {pg === "customer-signup" && <AuthScreen go={setPg} onAuth={handleAuth} mode="signup" role="customer" />}
