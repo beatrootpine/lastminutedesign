@@ -242,7 +242,7 @@ const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(on
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.white, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
 
 // ─── LAYOUT ─────────────────────────────────────────────────────────────────
-const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", background: X.navBg, backdropFilter: "blur(20px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>{!minimal && <div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log in</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
+const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", paddingTop: "max(10px, env(safe-area-inset-top))", background: X.navBg, backdropFilter: "blur(20px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>{!minimal && <div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log in</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
 
 const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: X.navBg, backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, cursor: "pointer" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={X.white}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
 
@@ -263,7 +263,7 @@ const Landing = ({ go }) => {
       <div style={{
         position: "relative", overflow: "hidden", minHeight: "70vh",
         display: "flex", alignItems: "center",
-        padding: "80px 16px 40px",
+        padding: "max(80px, calc(60px + env(safe-area-inset-top))) 16px 40px",
       }}>
         {/* Background image */}
         <img src="/hero-bg.jpg" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center right" }} onError={(e) => { e.target.style.display = "none"; }} />
@@ -1548,7 +1548,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
       {/* Main content */}
       <div style={{ flex: 1, overflow: "auto", paddingBottom: isMobile ? 70 : 0 }}>
         {/* Top bar */}
-        <div style={{ padding: isMobile ? "10px 14px" : "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: X.navBg, backdropFilter: "blur(10px)", zIndex: 50 }}>
+        <div style={{ padding: isMobile ? "10px 14px" : "10px 20px", paddingTop: isMobile ? "max(10px, env(safe-area-inset-top))" : "10px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: X.navBg, backdropFilter: "blur(10px)", zIndex: 50 }}>
           {isMobile ? (
             <>
               <span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>
