@@ -400,43 +400,41 @@ const Landing = ({ go }) => {
       {/* ─── FOR DESIGNERS ─── */}
       <div style={{ borderTop: `1px solid ${X.border}`, background: X.bg }}>
         <Section>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <Pill color={X.white}>For Designers</Pill>
-            <SectionH>Turn your talent into income.<br />On your terms.</SectionH>
-            <SectionP style={{ margin: "0 auto" }}>
-              No cold pitching. No client chasing. No unpaid quotes. Just open your dashboard, accept a gig, deliver great work, and get paid. Simple.
-            </SectionP>
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <T sm dim style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>For Designers</T>
+            <SectionH>Get paid for your talent.</SectionH>
+            <SectionP style={{ margin: "0 auto" }}>Accept gigs, deliver work, get paid weekly. No pitching, no chasing invoices.</SectionP>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 28 }}>
             {[
-              { icon: "💸", title: "75% Earnings", desc: "You keep 75% of every gig. Weekly payouts straight to your bank account." },
-              { icon: "🕐", title: "Work When You Want", desc: "Go online when you're available, go offline when you're not. No minimums, no schedules." },
-              { icon: "📈", title: "Build Your Rep", desc: "Every delivery earns you ratings. Higher ratings = more gigs = more money." },
-              { icon: "🎯", title: "Matched to Your Skills", desc: "Only see gigs that match your skillset. No wasted time on work you don't do." },
-            ].map(f => (
-              <Card key={f.title} style={{ padding: 24, flex: "1 1 200px", borderTop: `2px solid ${X.white}` }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
-                <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 16, color: X.white, marginBottom: 6 }}>{f.title}</div>
+              { title: "75% earnings", desc: "You keep most of what the client pays. Weekly bank payouts." },
+              { title: "Your schedule", desc: "Go online when available, offline when not. No commitments." },
+              { title: "Build your rating", desc: "Every delivery earns reviews. Better ratings, more gigs." },
+              { title: "Skill-matched", desc: "Only see gigs that fit your expertise. No wasted time." },
+            ].map((f, i) => (
+              <Card key={f.title} style={{ padding: 20 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: X.white, color: X.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 800, fontSize: 13, marginBottom: 12 }}>{i + 1}</div>
+                <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 15, color: X.white, marginBottom: 4 }}>{f.title}</div>
                 <T dim sm>{f.desc}</T>
               </Card>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 28 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 28 }}>
             {[
-              { v: "R12,000+", l: "Avg monthly earnings" },
-              { v: "15 min", l: "Avg time to first gig" },
-              { v: "247+", l: "Active designers" },
+              { v: "R12k+", l: "Monthly avg" },
+              { v: "15 min", l: "To first gig" },
+              { v: "247+", l: "Designers" },
               { v: "Weekly", l: "Payouts" },
             ].map(s => (
-              <Card key={s.l} style={{ textAlign: "center", padding: 14 }}>
-                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.white }}>{s.v}</div>
+              <div key={s.l} style={{ textAlign: "center", padding: 10 }}>
+                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white }}>{s.v}</div>
                 <T sm dim>{s.l}</T>
-              </Card>
+              </div>
             ))}
           </div>
           <div style={{ textAlign: "center" }}>
-            <Btn onClick={() => go("designer-register")} style={{ padding: "12px 28px", fontSize: 14 }}>Apply as a Designer →</Btn>
-            <T dim sm style={{ marginTop: 10 }}>Free to join · Takes 2 minutes</T>
+            <Btn onClick={() => go("designer-register")}>Apply as designer →</Btn>
+            <T dim sm style={{ marginTop: 10 }}>Free to join · 2 minutes</T>
           </div>
         </Section>
       </div>
