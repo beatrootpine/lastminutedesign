@@ -251,31 +251,37 @@ const Landing = ({ go }) => {
 
       {/* ─── HERO BANNER ─── */}
       <div style={{
-        position: "relative", overflow: "hidden", minHeight: 520,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "120px 20px 60px",
-        background: X.bg,
+        position: "relative", overflow: "hidden", minHeight: 580,
+        display: "flex", alignItems: "center",
+        padding: "100px 20px 60px",
       }}>
-        {/* Subtle grid */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${X.border}40 1px, transparent 1px), linear-gradient(90deg, ${X.border}40 1px, transparent 1px)`, backgroundSize: "80px 80px", pointerEvents: "none", opacity: 0.3 }} />
+        {/* Background image */}
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url(/hero-bg.jpg)", backgroundSize: "cover", backgroundPosition: "center right", }} />
+        {/* Overlay — dark gradient from left for text readability */}
+        <div style={{ position: "absolute", inset: 0, background: X.bg === "#ffffff"
+          ? "linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 35%, rgba(255,255,255,0.4) 60%, transparent 100%)"
+          : "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.4) 60%, transparent 100%)"
+        }} />
 
-        {/* Content */}
-        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 640 }}>
-          <div style={{ fontSize: 11, fontWeight: 500, fontFamily: "Inter", textTransform: "uppercase", letterSpacing: "0.12em", color: X.gray, marginBottom: 20 }}>On-demand design studio</div>
-          <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(40px, 7vw, 68px)", lineHeight: 1.04, color: X.white, margin: "0 0 20px", letterSpacing: "-0.04em" }}>
-            Never miss a<br />deadline again.
-          </h1>
-          <p style={{ fontSize: 16, color: X.gray, maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.7 }}>
-            Graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
-          </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-            <Btn onClick={() => go("customer-signup")} style={{ padding: "12px 28px", fontSize: 14 }}>Get started →</Btn>
-            <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "12px 28px", fontSize: 14 }}>Join as designer</Btn>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 36 }}>
-            {["No contracts", "No subscriptions", "Pay per project"].map(t => (
-              <T key={t} sm dim>{t}</T>
-            ))}
+        {/* Content — left aligned */}
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1100, margin: "0 auto", width: "100%", padding: "0 20px" }}>
+          <div style={{ maxWidth: 480 }}>
+            <div style={{ fontSize: 11, fontWeight: 500, fontFamily: "Inter", textTransform: "uppercase", letterSpacing: "0.12em", color: X.gray, marginBottom: 20 }}>On-demand design studio</div>
+            <h1 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(36px, 5vw, 56px)", lineHeight: 1.06, color: X.white, margin: "0 0 18px", letterSpacing: "-0.04em" }}>
+              Never miss a<br />deadline again.
+            </h1>
+            <p style={{ fontSize: 15, color: X.grayLight, maxWidth: 400, margin: "0 0 28px", lineHeight: 1.7 }}>
+              Graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Btn onClick={() => go("customer-signup")} style={{ padding: "12px 28px", fontSize: 14 }}>Get started →</Btn>
+              <Btn v="secondary" onClick={() => go("designer-register")} style={{ padding: "12px 28px", fontSize: 14 }}>Join as designer</Btn>
+            </div>
+            <div style={{ display: "flex", gap: 20, marginTop: 32 }}>
+              {["No contracts", "No subscriptions", "Pay per project"].map(t => (
+                <T key={t} sm dim>{t}</T>
+              ))}
+            </div>
           </div>
         </div>
       </div>
