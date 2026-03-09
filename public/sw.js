@@ -1,43 +1,24 @@
 const CACHE_NAME = 'lmd-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-];
 
-// Install — cache static assets
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
-  self.skipWaiting();
-});
-
-// Activate — clean old caches
+self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
+  e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))));
   self.clients.claim();
 });
 
-// Fetch — network first, fall back to cache
 self.addEventListener('fetch', (e) => {
-  // Skip API calls and non-GET requests
-  if (e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  const url = e.request.url;
+  if (e.request.method !== 'GET') return;
+  if (!url.startsWith('http')) return;
+  if (url.includes('/api/')) return;
 
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        // Cache successful responses
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        }
-        return res;
-      })
-      .catch(() => caches.match(e.request))
+    fetch(e.request).then((res) => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then((c) => c.put(e.request, clone)).catch(() => {});
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
