@@ -334,51 +334,37 @@ const Landing = ({ go }) => {
         </div>
       </Section>
 
-      {/* ─── FOR BUSINESSES & INDIVIDUALS ─── */}
+      {/* ─── WHO IT'S FOR ─── */}
       <div style={{ borderTop: `1px solid ${X.border}` }}>
         <Section>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 40 }}>
             <div>
-              <SectionLabel>For Businesses</SectionLabel>
-              <SectionH>The deadline is tomorrow.<br />We've got you.</SectionH>
-              <SectionP style={{ marginBottom: 20 }}>
-                Your printer needs files by 8am. The event is this weekend. The client changed the brief at 5pm. Sound familiar? We exist for exactly these moments.
-              </SectionP>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  ["⚡", "Rush jobs handled 24/7 — even weekends and holidays"],
-                  ["📐", "Professional, print-ready files every time"],
-                  ["🔒", "Consistent quality from vetted, rated designers"],
-                  ["📦", "Bundle multiple services in one order"],
-                ].map(([icon, text]) => (
-                  <div key={text} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
-                    <T style={{ color: X.grayLight, fontSize: 14 }}>{text}</T>
+              <T sm dim style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>For Businesses</T>
+              <H s={28} style={{ marginBottom: 14 }}>Deadline tomorrow?<br />We've got you.</H>
+              <T style={{ color: X.grayLight, marginBottom: 20, lineHeight: 1.7 }}>Rush jobs, last-minute changes, weekend emergencies. Upload a brief, pick your turnaround, and get print-ready files back — fast.</T>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                {["24/7 availability", "Print-ready output", "Vetted designers", "Bundle services"].map(t => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: X.white, flexShrink: 0 }} />
+                    <T sm style={{ color: X.grayLight }}>{t}</T>
                   </div>
                 ))}
               </div>
-              <Btn onClick={() => go("customer-login")} style={{ marginTop: 20 }}>Submit a Gig →</Btn>
+              <Btn onClick={() => go("customer-signup")}>Submit a gig →</Btn>
             </div>
             <div>
-              <SectionLabel>For Individuals</SectionLabel>
-              <SectionH>That thing you've been putting off? Done by morning.</SectionH>
-              <SectionP style={{ marginBottom: 20 }}>
-                Wedding invites. Your startup logo. A CV that actually stands out. A tombstone unveiling programme. Whatever you need designed — stop stressing and let a pro handle it.
-              </SectionP>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  ["💰", "Transparent pricing — see your total before you pay"],
-                  ["🎯", "No design jargon — just describe what you need"],
-                  ["🕐", "Pick your deadline: 4 hours, 12 hours, or 24 hours"],
-                  ["⭐", "Rate your designer and see reviews before they start"],
-                ].map(([icon, text]) => (
-                  <div key={text} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
-                    <T style={{ color: X.grayLight, fontSize: 14 }}>{text}</T>
+              <T sm dim style={{ textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>For Individuals</T>
+              <H s={28} style={{ marginBottom: 14 }}>Need something<br />designed? Say less.</H>
+              <T style={{ color: X.grayLight, marginBottom: 20, lineHeight: 1.7 }}>Logos, invites, CVs, social posts — describe what you need, pick a deadline, and a pro designer handles the rest.</T>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                {["No jargon required", "See pricing upfront", "Choose your deadline", "Rate your designer"].map(t => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: X.white, flexShrink: 0 }} />
+                    <T sm style={{ color: X.grayLight }}>{t}</T>
                   </div>
                 ))}
               </div>
-              <Btn onClick={() => go("customer-login")} style={{ marginTop: 20 }}>Get Started →</Btn>
+              <Btn onClick={() => go("customer-signup")}>Get started →</Btn>
             </div>
           </div>
         </Section>
@@ -389,20 +375,24 @@ const Landing = ({ go }) => {
         <Section style={{ textAlign: "center" }}>
           <SectionLabel>Delivery Options</SectionLabel>
           <SectionH>Pick your speed</SectionH>
-          <SectionP style={{ margin: "0 auto 32px" }}>Every tier gets the same quality. The only difference is how fast you need it.</SectionP>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <SectionP style={{ margin: "0 auto 32px" }}>Same quality every time. You just choose when you need it.</SectionP>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
             {[
-              { h: "4", tag: "RUSH", color: X.red, desc: "Ultra-priority. Your designer starts within minutes. For when it absolutely cannot wait.", icon: "⚡" },
-              { h: "12", tag: "EXPRESS", color: X.yellow, desc: "Same-day delivery. Perfect for that thing you forgot about this morning.", icon: "🔥" },
-              { h: "24", tag: "STANDARD", color: X.green, desc: "Next-day delivery. Best value. Great for planned projects with tight timelines.", icon: "🕐" },
+              { h: "4", tag: "RUSH", color: X.red, desc: "Starts immediately" },
+              { h: "12", tag: "EXPRESS", color: X.yellow, desc: "Same-day delivery" },
+              { h: "24", tag: "STANDARD", color: X.green, desc: "Next-day delivery" },
             ].map(t => (
-              <Card key={t.h} onClick={() => go("customer-login")} style={{ cursor: "pointer", padding: 24, textAlign: "center", borderTop: `2px solid ${t.color}` }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>{t.icon}</div>
+              <Card key={t.h} onClick={() => go("customer-signup")} style={{ cursor: "pointer", padding: 20, textAlign: "center", borderTop: `2px solid ${t.color}` }}>
                 <Pill color={t.color}>{t.tag}</Pill>
-                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 36, color: X.white, margin: "10px 0 4px" }}>{t.h}h</div>
+                <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 32, color: X.white, margin: "10px 0 4px" }}>{t.h}h</div>
                 <T dim sm>{t.desc}</T>
               </Card>
             ))}
+            <Card onClick={() => go("customer-signup")} style={{ cursor: "pointer", padding: 20, textAlign: "center", borderTop: `2px solid ${X.gray}` }}>
+              <Pill color={X.gray}>FLEXIBLE</Pill>
+              <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 32, color: X.white, margin: "10px 0 4px" }}>Custom</div>
+              <T dim sm>You set the deadline</T>
+            </Card>
           </div>
         </Section>
       </div>
