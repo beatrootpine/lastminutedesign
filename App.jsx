@@ -1464,7 +1464,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
 
           {!loading && showCreate && <CreateGig onSubmit={(data) => { createGig(data); setShowCreate(false); }} onBack={() => setShowCreate(false)} />}
 
-          {!loading && !showCreate && selectedGig && <ProjectView gig={selectedGig} designer={designers.find(d => d.id === selectedGig.designer_id)} rating={ratings.find(r => r.gig_id === selectedGig.id)} isCust={isCust} userId={profile.id} userName={profile.name} onBack={() => setSelectedGig(null)} onRate={(id) => setRateGig({ id, designer_id: selectedGig.designer_id, service: selectedGig.service })} onDeliver={deliverGig} onAccept={acceptGig} />}
+          {!loading && !showCreate && selectedGig && <ProjectView gig={selectedGig} designer={designers.find(d => d.id === selectedGig.designer_id)} rating={ratings.find(r => r.gig_id === selectedGig.id)} isCust={isCust} userId={profile.id} userName={profile.name} onBack={() => setSelectedGig(null)} onRate={(id) => setRateGig({ id, designer_id: selectedGig.designer_id, service: selectedGig.service })} onDeliver={deliverGig} onAccept={acceptGig} onRefresh={async () => { await load(); setSelectedGig(null); }} />}
 
           {!loading && !showCreate && !selectedGig && section === "projects" && (
             <div>
