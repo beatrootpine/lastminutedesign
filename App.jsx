@@ -131,6 +131,110 @@ const Field = ({ label, value, onChange, type = "text", placeholder, textarea })
 
 const Bar = ({ pct }) => <div style={{ width: "100%", height: 4, background: X.bg, borderRadius: 2, overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: pct > 80 ? X.red : pct > 50 ? X.yellow : X.orange, transition: "width 0.4s" }} /></div>;
 
+// ─── COLOR PICKER ────────────────────────────────────────────────────────
+const ColorPicker = ({ label, value, onChange }) => {
+  // value is comma-separated hex string like "#1B2A4A, #D4AF37"
+  const [colors, setColors] = useState(() => {
+    if (!value) return [];
+    return value.split(",").map(c => c.trim()).filter(c => /^#[0-9a-fA-F]{3,6}$/.test(c));
+  });
+  const [showPicker, setShowPicker] = useState(false);
+  const [currentColor, setCurrentColor] = useState("#f97316");
+  const [hexInput, setHexInput] = useState("#f97316");
+
+  useEffect(() => {
+    if (!value) { setColors([]); return; }
+    const parsed = value.split(",").map(c => c.trim()).filter(c => /^#[0-9a-fA-F]{3,6}$/.test(c));
+    setColors(parsed);
+  }, [value]);
+
+  const updateParent = (newColors) => {
+    onChange(newColors.join(", "));
+  };
+
+  const addColor = () => {
+    if (currentColor && !colors.includes(currentColor)) {
+      const nc = [...colors, currentColor];
+      setColors(nc);
+      updateParent(nc);
+    }
+    setShowPicker(false);
+  };
+
+  const removeColor = (hex) => {
+    const nc = colors.filter(c => c !== hex);
+    setColors(nc);
+    updateParent(nc);
+  };
+
+  const handleHexChange = (val) => {
+    setHexInput(val);
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) setCurrentColor(val);
+  };
+
+  const handleNativeChange = (val) => {
+    setCurrentColor(val);
+    setHexInput(val);
+  };
+
+  const presets = ["#000000", "#ffffff", "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899", "#1B2A4A", "#D4AF37", "#2D3436", "#0984E3", "#6C5CE7", "#00B894"];
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {label && <label style={{ display: "block", marginBottom: 5, fontSize: 11, fontWeight: 600, color: X.gray, fontFamily: "Outfit", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</label>}
+
+      {/* Color swatches */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, alignItems: "center" }}>
+        {colors.map(c => (
+          <div key={c} style={{ position: "relative", cursor: "pointer" }} onClick={() => removeColor(c)} title={`${c} — click to remove`}>
+            <div style={{ width: 32, height: 32, borderRadius: 6, background: c, border: `2px solid ${X.border}`, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+            <div style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: X.red, color: "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</div>
+            <T sm dim style={{ textAlign: "center", marginTop: 2, fontSize: 9 }}>{c}</T>
+          </div>
+        ))}
+        <button onClick={() => setShowPicker(!showPicker)} style={{
+          width: 32, height: 32, borderRadius: 6, border: `2px dashed ${X.border}`,
+          background: "transparent", color: X.gray, fontSize: 16, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>+</button>
+      </div>
+
+      {/* Picker panel */}
+      {showPicker && (
+        <div style={{ background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: 14, marginBottom: 8 }}>
+          {/* Native color input (wheel) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <input type="color" value={currentColor} onChange={e => handleNativeChange(e.target.value)} style={{ width: 48, height: 48, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent", padding: 0 }} />
+            <div style={{ flex: 1 }}>
+              <T sm dim style={{ marginBottom: 4 }}>Pick a color or enter hex</T>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={hexInput} onChange={e => handleHexChange(e.target.value)} placeholder="#000000" maxLength={7} style={{ flex: 1, background: X.inputBg || X.bg, border: `1px solid ${X.border}`, borderRadius: 6, padding: "6px 10px", color: X.white, fontFamily: "monospace", fontSize: 14, outline: "none" }} />
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: currentColor, border: `1px solid ${X.border}`, flexShrink: 0 }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Presets */}
+          <T sm dim style={{ marginBottom: 6 }}>Quick picks</T>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
+            {presets.map(p => (
+              <button key={p} onClick={() => { setCurrentColor(p); setHexInput(p); }} style={{
+                width: 24, height: 24, borderRadius: 4, background: p, cursor: "pointer",
+                border: currentColor === p ? `2px solid ${X.orange}` : `1px solid ${X.border}`,
+              }} title={p} />
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 6 }}>
+            <Btn sm onClick={addColor}>Add {currentColor}</Btn>
+            <Btn sm v="ghost" onClick={() => setShowPicker(false)}>Cancel</Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]); return <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, background: X.card, border: `1px solid ${X.border}`, borderRadius: 10, padding: "12px 20px", fontFamily: "Outfit", fontWeight: 600, fontSize: 13, color: X.white, animation: "fadeIn 0.2s ease", boxShadow: X.bg === "#fafafa" ? "0 4px 16px rgba(0,0,0,0.08)" : "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 8 }}><span style={{ color: X.orange }}>●</span> {msg}</div>; };
 
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.orange, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
@@ -596,6 +700,7 @@ const CreateGig = ({ onSubmit, onBack }) => {
   const [openCats, setOpenCats] = useState([]);
   const [briefStyle, setBriefStyle] = useState([]);
   const [briefColor, setBriefColor] = useState("");
+  const [briefCustomColors, setBriefCustomColors] = useState("");
   const [briefMood, setBriefMood] = useState([]);
   const [briefAudience, setBriefAudience] = useState([]);
   const [briefFormat, setBriefFormat] = useState([]);
@@ -621,7 +726,11 @@ const CreateGig = ({ onSubmit, onBack }) => {
     // Compile structured brief
     const parts = [];
     if (briefStyle.length) parts.push(`Style: ${briefStyle.join(", ")}`);
-    if (briefColor) parts.push(`Colors: ${briefColor === "brand" ? "Use my brand colors" : briefColor}`);
+    if (briefColor) {
+      if (briefColor === "custom" && briefCustomColors) parts.push(`Colors: Custom — ${briefCustomColors}`);
+      else if (briefColor === "brand") parts.push("Colors: Use my brand colors");
+      else parts.push(`Colors: ${briefColor}`);
+    }
     if (briefMood.length) parts.push(`Mood: ${briefMood.join(", ")}`);
     if (briefAudience.length) parts.push(`Audience: ${briefAudience.join(", ")}`);
     if (briefFormat.length) parts.push(`Format: ${briefFormat.join(", ")}`);
@@ -764,6 +873,7 @@ const CreateGig = ({ onSubmit, onBack }) => {
                 { label: "Neon / Electric", val: "neon" },
                 { label: "Gold & Premium", val: "gold" },
                 { label: "Designer's Choice", val: "designer" },
+                { label: "🎨 Custom Colors", val: "custom" },
               ].map(c => (
                 <button key={c.val} onClick={() => setBriefColor(c.val)} style={{
                   padding: "6px 12px", borderRadius: 6, fontSize: 12, fontFamily: "Inter",
@@ -774,6 +884,11 @@ const CreateGig = ({ onSubmit, onBack }) => {
                 }}>{c.label}</button>
               ))}
             </div>
+            {briefColor === "custom" && (
+              <div style={{ marginTop: 10 }}>
+                <ColorPicker label="Pick your colors" value={briefCustomColors} onChange={setBriefCustomColors} />
+              </div>
+            )}
           </div>
 
           {/* Mood */}
@@ -1207,7 +1322,7 @@ const CustProfile = ({ customer, onUpdate }) => {
               <Field label="Company Name *" value={f.company_name || ""} onChange={v => set("company_name", v)} placeholder="Acme (Pty) Ltd" />
               <Field label="Registration" value={f.registration_number || ""} onChange={v => set("registration_number", v)} placeholder="2024/000000/07" />
               <Field label="Tagline" value={f.tagline || ""} onChange={v => set("tagline", v)} />
-              <Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="#1B2A4A, #D4AF37" />
+              <ColorPicker label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} />
             </div>
             <div>
               <Field label="Email *" value={f.company_email || ""} onChange={v => set("company_email", v)} placeholder="info@company.co.za" />
