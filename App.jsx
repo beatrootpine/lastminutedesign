@@ -281,7 +281,7 @@ const Landing = ({ go }) => {
               Never miss a<br />deadline again.
             </h1>
             <p style={{ fontSize: 15, color: X.grayLight, maxWidth: 400, margin: "0 0 28px", lineHeight: 1.7 }}>
-              Graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted South African designers matched to your project instantly.
+              Graphic design with guaranteed 4, 12 or 24-hour delivery. Vetted designers matched to your project instantly.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Btn onClick={() => go("customer-signup")} style={{ padding: "12px 28px", fontSize: 14 }}>Get started →</Btn>
