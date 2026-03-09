@@ -156,6 +156,23 @@ export default async function handler(req, res) {
         return res.json({ designers });
       }
 
+      case "get_support_tickets": {
+        const tickets = await db("support_messages?order=created_at.desc");
+        return res.json({ tickets });
+      }
+
+      case "reply_support": {
+        const { ticket_id, status } = req.body;
+        await db(`support_messages?id=eq.${ticket_id}`, { method: "PATCH", body: { status: status || "replied" } });
+        return res.json({ success: true });
+      }
+
+      case "close_support": {
+        const { ticket_id } = req.body;
+        await db(`support_messages?id=eq.${ticket_id}`, { method: "PATCH", body: { status: "closed" } });
+        return res.json({ success: true });
+      }
+
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
