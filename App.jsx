@@ -95,7 +95,7 @@ const shared = {
   tealDim: "rgba(6,182,212,0.08)", tealBorder: "rgba(6,182,212,0.15)",
 };
 
-let X = { ...themes.dark, ...shared };
+let X = { ...themes.light, ...shared };
 const setTheme = (t) => { Object.assign(X, themes[t], shared); };
 
 // ─── UI PRIMITIVES ──────────────────────────────────────────────────────────
@@ -1734,7 +1734,7 @@ const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 export default function App() {
   const [pg, setPg] = useState("landing"); const [toast, setToast] = useState(null); const [profile, setProfile] = useState(null); const [role, setRole] = useState(null); const [rateGig, setRateGig] = useState(null);
-  const [theme, setThemeState] = useState(() => localStorage.getItem("lmd_theme") || "dark");
+  const [theme, setThemeState] = useState(() => localStorage.getItem("lmd_theme") || "light");
   const note = m => setToast(m);
 
   const toggleTheme = () => {
