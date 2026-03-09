@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── PRICING DATA ───────────────────────────────────────────────────────────
 const SERVICES = {
-  "Corporate Identity": [
+  "Brand Identity": [
     { name: "Logo Design", prices: { 4: 1750, 12: 1200, 24: 1000 } },
     { name: "Brand Identity Pack", prices: { 4: 4500, 12: 3200, 24: 2800 } },
     { name: "Business Card Design", prices: { 4: 850, 12: 650, 24: 500 } },
     { name: "Letterhead & Envelope", prices: { 4: 1200, 12: 950, 24: 750 } },
     { name: "Brand Guidelines Document", prices: { 4: 3500, 12: 2800, 24: 2200 } },
   ],
-  "Print & Marketing Designs": [
+  "Print & Marketing": [
     { name: "Flyer / Poster", prices: { 4: 950, 12: 750, 24: 600 } },
     { name: "Brochure (bi/tri-fold)", prices: { 4: 1800, 12: 1400, 24: 1100 } },
     { name: "Event Backdrop / Banner", prices: { 4: 2200, 12: 1700, 24: 1400 } },
@@ -36,7 +36,7 @@ const ALL_SERVICES = Object.values(SERVICES).flat();
 const TIERS = {
   4: { label: "4 Hours", tag: "RUSH", desc: "Ultra-priority. Work starts immediately." },
   12: { label: "12 Hours", tag: "EXPRESS", desc: "Same-day delivery. Starts within 2 hours." },
-  24: { label: "24+ Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
+  24: { label: "24 Hours", tag: "STANDARD", desc: "Next-day delivery. Best value." },
 };
 
 // ─── API HELPER ─────────────────────────────────────────────────────────────
@@ -404,8 +404,8 @@ const Landing = ({ go }) => {
         <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
           <span style={{ color: X.orange }}>lastminute</span>.design
         </div>
-        <T dim sm>Prooudly South Africa</T>
-        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 </T>
+        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
+        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
         <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
       </div>
     </div>
@@ -1112,21 +1112,149 @@ const SupportPage = ({ userId, userRole, userName, userEmail, accent }) => {
 
 // ─── PROFILES ───────────────────────────────────────────────────────────────
 const CustProfile = ({ customer, onUpdate }) => {
-  const [f, setF] = useState({ ...customer }); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [editing, setEditing] = useState(null); // company id or "new"
+  const [f, setF] = useState({});
+  const [pf, setPf] = useState({ name: customer.name || "", phone: customer.phone || "" }); // personal fields
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
-  const save = async () => { setSaving(true); const r = await api("update_customer_profile", { customer_id: customer.id, ...f }); if (r.customer) { onUpdate(r.customer); setSaved(true); setTimeout(() => setSaved(false), 2000); } setSaving(false); };
+
+  const loadCompanies = useCallback(async () => {
+    const r = await api("get_companies", { customer_id: customer.id }, "GET");
+    if (r.companies) setCompanies(r.companies);
+    setLoading(false);
+  }, [customer.id]);
+
+  useEffect(() => { loadCompanies(); }, [loadCompanies]);
+
+  const savePersonal = async () => {
+    setSaving(true);
+    const r = await api("update_customer_profile", { customer_id: customer.id, name: pf.name, phone: pf.phone });
+    if (r.customer) { onUpdate(r.customer); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    setSaving(false);
+  };
+
+  const saveCompany = async () => {
+    setSaving(true);
+    if (editing === "new") {
+      await api("create_company", { customer_id: customer.id, ...f });
+    } else {
+      await api("update_company", { company_id: editing, ...f });
+    }
+    await loadCompanies();
+    setEditing(null); setF({}); setSaving(false);
+    // Update customer's default company fields for backward compat
+    const updated = companies.find(c => c.is_default) || {};
+    await api("update_customer_profile", { customer_id: customer.id, company_name: updated.company_name, company_email: updated.company_email });
+  };
+
+  const deleteCompany = async (id) => {
+    if (!confirm("Delete this company profile?")) return;
+    await api("delete_company", { company_id: id });
+    await loadCompanies();
+  };
+
+  const setDefault = async (id) => {
+    await api("set_default_company", { customer_id: customer.id, company_id: id });
+    await loadCompanies();
+    // Sync default to customer record
+    const comp = companies.find(c => c.id === id);
+    if (comp) await api("update_customer_profile", { customer_id: customer.id, company_name: comp.company_name, company_email: comp.company_email });
+  };
+
+  const startEdit = (comp) => {
+    setEditing(comp.id);
+    setF({ ...comp });
+  };
+
+  const startNew = () => {
+    setEditing("new");
+    setF({ company_name: "", company_email: "", company_phone: "", company_address: "", company_website: "", registration_number: "", tagline: "", brand_colors: "", social_instagram: "", social_facebook: "", social_linkedin: "" });
+  };
+
+  if (loading) return <Spinner text="Loading profiles..." />;
+
   return (
     <div>
-      <H s={20} style={{ marginBottom: 4 }}>Business Details</H><T dim sm style={{ marginBottom: 20 }}>Auto-populates into design briefs</T>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Personal</T><Field label="Name" value={f.name || ""} onChange={v => set("name", v)} /><Field label="Phone" value={f.phone || ""} onChange={v => set("phone", v)} placeholder="+27 82 000 0000" /></Card>
-        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Company</T><Field label="Company Name" value={f.company_name || ""} onChange={v => set("company_name", v)} /><Field label="Reg Number" value={f.registration_number || ""} onChange={v => set("registration_number", v)} /><Field label="Tagline" value={f.tagline || ""} onChange={v => set("tagline", v)} /></Card>
+      {/* Personal details */}
+      <H s={20} style={{ marginBottom: 4 }}>Personal Details</H>
+      <Card style={{ padding: 16, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          <Field label="Full Name" value={pf.name} onChange={v => setPf(p => ({ ...p, name: v }))} />
+          <Field label="Phone" value={pf.phone} onChange={v => setPf(p => ({ ...p, phone: v }))} placeholder="+27 82 000 0000" />
+        </div>
+        <Btn sm onClick={savePersonal} disabled={saving}>{saved ? "✓ Saved!" : "Save"}</Btn>
+      </Card>
+
+      {/* Company profiles */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <H s={20}>Company Profiles ({companies.length})</H>
+        <Btn sm onClick={startNew}>+ Add Company</Btn>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 12 }}>
-        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Contact</T><Field label="Email" value={f.company_email || ""} onChange={v => set("company_email", v)} /><Field label="Phone" value={f.company_phone || ""} onChange={v => set("company_phone", v)} /><Field label="Website" value={f.company_website || ""} onChange={v => set("company_website", v)} /><Field label="Address" value={f.company_address || ""} onChange={v => set("company_address", v)} textarea /></Card>
-        <Card style={{ padding: 16 }}><T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 10 }}>Brand & Social</T><Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="#1B2A4A, #D4AF37" /><Field label="Instagram" value={f.social_instagram || ""} onChange={v => set("social_instagram", v)} /><Field label="Facebook" value={f.social_facebook || ""} onChange={v => set("social_facebook", v)} /><Field label="LinkedIn" value={f.social_linkedin || ""} onChange={v => set("social_linkedin", v)} /></Card>
-      </div>
-      <Btn onClick={save} disabled={saving} style={{ marginTop: 16 }}>{saving ? "Saving..." : saved ? "✓ Saved!" : "Save Details"}</Btn>
+      <T dim sm style={{ marginBottom: 16 }}>Manage multiple companies. The default profile auto-populates into briefs.</T>
+
+      {/* Editing form */}
+      {editing && (
+        <Card style={{ padding: 16, marginBottom: 16, borderTop: `2px solid ${X.orange}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <T sm style={{ color: X.orange, fontWeight: 600 }}>{editing === "new" ? "NEW COMPANY" : "EDIT COMPANY"}</T>
+            <button onClick={() => { setEditing(null); setF({}); }} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>Cancel</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
+            <div>
+              <Field label="Company Name *" value={f.company_name || ""} onChange={v => set("company_name", v)} placeholder="Acme (Pty) Ltd" />
+              <Field label="Registration" value={f.registration_number || ""} onChange={v => set("registration_number", v)} placeholder="2024/000000/07" />
+              <Field label="Tagline" value={f.tagline || ""} onChange={v => set("tagline", v)} />
+              <Field label="Brand Colors" value={f.brand_colors || ""} onChange={v => set("brand_colors", v)} placeholder="#1B2A4A, #D4AF37" />
+            </div>
+            <div>
+              <Field label="Email *" value={f.company_email || ""} onChange={v => set("company_email", v)} placeholder="info@company.co.za" />
+              <Field label="Phone" value={f.company_phone || ""} onChange={v => set("company_phone", v)} />
+              <Field label="Website" value={f.company_website || ""} onChange={v => set("company_website", v)} />
+              <Field label="Address" value={f.company_address || ""} onChange={v => set("company_address", v)} textarea />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 4 }}>
+            <Field label="Instagram" value={f.social_instagram || ""} onChange={v => set("social_instagram", v)} />
+            <Field label="Facebook" value={f.social_facebook || ""} onChange={v => set("social_facebook", v)} />
+            <Field label="LinkedIn" value={f.social_linkedin || ""} onChange={v => set("social_linkedin", v)} />
+          </div>
+          <Btn onClick={saveCompany} disabled={saving || !f.company_name || !f.company_email}>{saving ? "Saving..." : editing === "new" ? "Create Company" : "Save Changes"}</Btn>
+        </Card>
+      )}
+
+      {/* Company list */}
+      {companies.length === 0 && !editing ? (
+        <Card style={{ textAlign: "center", padding: 36 }}>
+          <T dim style={{ marginBottom: 10 }}>No company profiles yet</T>
+          <Btn sm onClick={startNew}>+ Add Your First Company</Btn>
+        </Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {companies.map(c => (
+            <Card key={c.id} style={{ padding: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <T style={{ color: X.white, fontWeight: 700 }}>{c.company_name}</T>
+                    {c.is_default && <Pill color={X.green}>Default</Pill>}
+                  </div>
+                  <T sm dim>{[c.company_email, c.company_phone, c.company_website].filter(Boolean).join(" · ") || "No contact details"}</T>
+                  {c.tagline && <T sm dim style={{ marginTop: 2, fontStyle: "italic" }}>{c.tagline}</T>}
+                  {c.brand_colors && <div style={{ display: "flex", gap: 4, marginTop: 6 }}>{c.brand_colors.split(",").map((col, i) => { const hex = col.trim().match(/#[0-9a-fA-F]{3,6}/)?.[0]; return hex ? <div key={i} style={{ width: 18, height: 18, borderRadius: 4, background: hex, border: `1px solid ${X.border}` }} title={hex} /> : null; })}</div>}
+                </div>
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {!c.is_default && <Btn sm v="ghost" onClick={() => setDefault(c.id)}>Set Default</Btn>}
+                  <Btn sm v="ghost" onClick={() => startEdit(c)}>Edit</Btn>
+                  {!c.is_default && <button onClick={() => deleteCompany(c.id)} style={{ background: "none", border: "none", color: X.red, fontSize: 11, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", padding: "6px" }}>Delete</button>}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -1185,7 +1313,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
 
   const sideItems = isCust ? [
     { icon: "📋", label: "Projects", key: "projects", badge: active.length + delivered.length },
-    { icon: "🏢", label: "Business Profile", key: "profile" },
+    { icon: "🏢", label: "Companies", key: "profile" },
     { icon: "💬", label: "Support", key: "support" },
   ] : [
     { icon: "🔥", label: "Available", key: "available", badge: availGigs.length },
@@ -1203,7 +1331,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
         <div style={{ padding: 14, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${accent}, ${isCust ? X.orangeLight : X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 12, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</T><Pill color={accent}>{role}</Pill></div></div></div>
         <div style={{ padding: "8px 6px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={accent} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
         {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => {
-          if (!profile.company_name || !profile.company_email) { setSection("profile"); setShowCreate(false); setSelectedGig(null); alert("Please complete your Business Profile before submitting a gig. We need at least your company name and email."); return; }
+          if (!profile.company_name) { setSection("profile"); setShowCreate(false); setSelectedGig(null); alert("Please complete your Business Profile before submitting a gig. We need at least your company name and email."); return; }
           setShowCreate(true); setSelectedGig(null);
         }}>+ New Gig</Btn></div>}
         <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer", padding: "6px 0" }}>Sign out</button></div>
@@ -1226,7 +1354,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
           {!loading && !showCreate && !selectedGig && section === "projects" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => {
-                if (!profile.company_name || !profile.company_email) { setSection("profile"); setShowCreate(false); alert("Please complete your Business Profile first."); return; }
+                if (!profile.company_name) { setSection("profile"); setShowCreate(false); alert("Please complete your Business Profile first."); return; }
                 setShowCreate(true);
               }}>+ New Gig</Btn>}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
