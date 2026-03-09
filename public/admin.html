@@ -59,7 +59,7 @@ const h = (tag, attrs, ...kids) => {
 let adminEmail = localStorage.getItem('lmd_admin_email');
 let section = 'overview';
 let stats = null;
-let customers = []; let designers = []; let gigs = []; let payoutData = []; let supportTickets = [];
+let customers = []; let designers = []; let gigs = []; let payoutData = []; let supportTickets = []; let services = []; let adminList = [];
 let toast = '';
 
 const api = async (action, data = {}, method = 'POST') => {
@@ -80,6 +80,8 @@ const loadDesigners = async () => { const r = await api('get_designers', {}, 'GE
 const loadGigs = async () => { const r = await api('get_all_gigs', {}, 'GET'); if (r.gigs) gigs = r.gigs; };
 const loadPayouts = async () => { const r = await api('get_payout_queue', {}, 'GET'); if (r.designers) payoutData = r.designers; };
 const loadSupport = async () => { const r = await api('get_support_tickets', {}, 'GET'); if (r.tickets) supportTickets = r.tickets; };
+const loadServices = async () => { const r = await api('get_services', {}, 'GET'); if (r.services) services = r.services; };
+const loadAdmins = async () => { const r = await api('get_admins', {}, 'GET'); if (r.admins) adminList = r.admins; };
 const markReplied = async (id) => { await api('reply_support', { ticket_id: id, status: 'replied' }); showToast('Marked as replied'); await loadSupport(); render(); };
 const closeTicket = async (id) => { await api('close_support', { ticket_id: id }); showToast('Ticket closed'); await loadSupport(); render(); };
 
@@ -106,7 +108,7 @@ function renderLogin() {
           localStorage.setItem('lmd_admin_email', email);
           await loadStats();
           if (!stats) { showToast('Not an admin'); adminEmail = null; localStorage.removeItem('lmd_admin_email'); render(); return; }
-          await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]);
+          await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport(), loadServices(), loadAdmins()]);
           render();
         }}, 'Sign In')
       )
@@ -130,6 +132,9 @@ function render() {
     { icon: '💸', label: 'Payouts', key: 'payouts' },
     { icon: '🟢', label: 'Online Now', key: 'online' },
     { icon: '🎫', label: 'Support', key: 'support' },
+    { icon: '🏷', label: 'Services', key: 'services' },
+    { icon: '➕', label: 'Add User', key: 'adduser' },
+    { icon: '🔐', label: 'Admins', key: 'admins' },
   ];
 
   const sidebar = h('div', { class: 'side' },
@@ -362,11 +367,126 @@ function render() {
     }
   }
 
+  // SERVICES & PRICING
+  if (section === 'services') {
+    content.append(h('h2', null, `Services & Pricing (${services.length})`));
+    content.append(h('div', { style: { marginBottom: '16px' } },
+      h('button', { class: 'btn btn-orange', onClick: () => {
+        const cat = prompt('Category (e.g. Brand Identity, Print & Marketing):');
+        const name = prompt('Service name:');
+        const p4 = prompt('4h price (ZAR):');
+        const p12 = prompt('12h price (ZAR):');
+        const p24 = prompt('24h price (ZAR):');
+        if (cat && name && p4 && p12 && p24) {
+          api('create_service', { category: cat, name, price_4h: Number(p4), price_12h: Number(p12), price_24h: Number(p24) }).then(async () => { await loadServices(); render(); showToast('Service added'); });
+        }
+      }}, '+ Add Service')
+    ));
+
+    const cats = [...new Set(services.map(s => s.category))];
+    cats.forEach(cat => {
+      const catServices = services.filter(s => s.category === cat);
+      content.append(h('div', { class: 'card', style: { marginBottom: '12px' } },
+        h('h3', { style: { color: '#f97316', marginBottom: '12px' } }, cat + ' (' + catServices.length + ')'),
+        h('table', null,
+          h('thead', null, h('tr', null, h('th', null, 'Service'), h('th', null, '4h Rush'), h('th', null, '12h Express'), h('th', null, '24h Standard'), h('th', null, 'Status'), h('th', null, 'Actions'))),
+          h('tbody', null, ...catServices.map(s =>
+            h('tr', null,
+              h('td', { style: { color: '#fff', fontWeight: 600 } }, s.name),
+              h('td', null, 'R' + Number(s.price_4h).toLocaleString()),
+              h('td', null, 'R' + Number(s.price_12h).toLocaleString()),
+              h('td', null, 'R' + Number(s.price_24h).toLocaleString()),
+              h('td', null, h('span', { class: 'pill', style: { background: s.is_active ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)', color: s.is_active ? '#22c55e' : '#ef4444', border: '1px solid ' + (s.is_active ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)') } }, s.is_active ? 'Active' : 'Disabled')),
+              h('td', { style: { display: 'flex', gap: '4px' } },
+                h('button', { class: 'btn btn-gray', onClick: () => {
+                  const newName = prompt('Service name:', s.name);
+                  const np4 = prompt('4h price:', s.price_4h);
+                  const np12 = prompt('12h price:', s.price_12h);
+                  const np24 = prompt('24h price:', s.price_24h);
+                  if (newName && np4 && np12 && np24) {
+                    api('update_service', { service_id: s.id, name: newName, price_4h: Number(np4), price_12h: Number(np12), price_24h: Number(np24) }).then(async () => { await loadServices(); render(); showToast('Updated'); });
+                  }
+                }}, 'Edit'),
+                h('button', { class: 'btn ' + (s.is_active ? 'btn-red' : 'btn-green'), onClick: () => {
+                  api('update_service', { service_id: s.id, is_active: !s.is_active }).then(async () => { await loadServices(); render(); showToast(s.is_active ? 'Disabled' : 'Enabled'); });
+                }}, s.is_active ? 'Disable' : 'Enable'),
+                h('button', { class: 'btn btn-red', onClick: () => {
+                  if (confirm('Delete ' + s.name + '?')) api('delete_service', { service_id: s.id }).then(async () => { await loadServices(); render(); showToast('Deleted'); });
+                }}, '✕')
+              )
+            )
+          ))
+        )
+      ));
+    });
+  }
+
+  // ADD USER
+  if (section === 'adduser') {
+    content.append(h('h2', null, 'Add User Manually'));
+    const form = h('div', { class: 'card', style: { maxWidth: '500px' } },
+      h('div', { style: { marginBottom: '12px' } },
+        h('label', { style: { display: 'block', marginBottom: '4px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase' } }, 'Role'),
+        h('div', { style: { display: 'flex', gap: '4px' } },
+          ...['customer', 'designer', 'admin'].map(r =>
+            h('button', { class: 'btn', id: 'role-' + r, style: { background: '#1e1e24', color: '#a1a1aa', flex: 1 }, onClick: (e) => {
+              document.querySelectorAll('[id^=role-]').forEach(b => { b.style.background = '#1e1e24'; b.style.color = '#a1a1aa'; });
+              e.target.style.background = r === 'designer' ? '#06b6d4' : r === 'admin' ? '#22c55e' : '#f97316';
+              e.target.style.color = '#09090b';
+              document.getElementById('add-user-role').value = r;
+            }}, r.charAt(0).toUpperCase() + r.slice(1))
+          )
+        ),
+        h('input', { type: 'hidden', id: 'add-user-role', value: 'customer' })
+      ),
+      h('label', { style: { display: 'block', marginBottom: '4px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase' } }, 'Full Name'),
+      h('input', { id: 'add-user-name', placeholder: 'John Smith' }),
+      h('label', { style: { display: 'block', marginBottom: '4px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase' } }, 'Email'),
+      h('input', { id: 'add-user-email', type: 'email', placeholder: 'user@email.com' }),
+      h('label', { style: { display: 'block', marginBottom: '4px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase' } }, 'Password'),
+      h('input', { id: 'add-user-password', type: 'text', placeholder: 'Default: Welcome123!', value: '' }),
+      h('label', { style: { display: 'block', marginBottom: '4px', fontSize: '11px', fontWeight: '600', color: '#71717a', fontFamily: 'Outfit', textTransform: 'uppercase' } }, 'City (designers only)'),
+      h('input', { id: 'add-user-city', placeholder: 'Johannesburg' }),
+      h('button', { class: 'btn btn-orange', style: { width: '100%', padding: '12px', marginTop: '8px' }, onClick: async () => {
+        const role = document.getElementById('add-user-role').value;
+        const name = document.getElementById('add-user-name').value;
+        const email = document.getElementById('add-user-email').value;
+        const password = document.getElementById('add-user-password').value;
+        const city = document.getElementById('add-user-city').value;
+        if (!name || !email) { showToast('Name and email required'); return; }
+        const r = await api('create_user', { name, email, role, password: password || undefined, city });
+        if (r.error) { showToast('Error: ' + r.error); } else { showToast(role + ' created: ' + name); await Promise.all([loadCustomers(), loadDesigners(), loadAdmins()]); render(); }
+      }}, 'Create User')
+    );
+    content.append(form);
+  }
+
+  // ADMINS
+  if (section === 'admins') {
+    content.append(h('h2', null, `Admin Users (${adminList.length})`));
+    content.append(h('div', { class: 'card' },
+      h('table', null,
+        h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Added'), h('th', null, 'Actions'))),
+        h('tbody', null, ...adminList.map(a =>
+          h('tr', null,
+            h('td', { style: { color: '#fff', fontWeight: 600 } }, a.name || '-'),
+            h('td', null, a.email),
+            h('td', null, new Date(a.created_at).toLocaleDateString('en-ZA')),
+            h('td', null, a.email === adminEmail
+              ? h('span', { style: { color: '#22c55e', fontSize: '11px' } }, '← You')
+              : h('button', { class: 'btn btn-red', onClick: () => { if (confirm('Remove admin access for ' + a.email + '?')) api('delete_admin', { admin_id: a.id }).then(async () => { await loadAdmins(); render(); showToast('Admin removed'); }); }}, 'Remove')
+            )
+          )
+        ))
+      )
+    ));
+  }
+
   const main = h('div', { class: 'main' },
     h('div', { class: 'top' },
       h('div', { style: { fontFamily: 'Outfit', fontWeight: 700, fontSize: '14px', color: '#fff' } }, '⚙️ Admin Panel'),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-        h('button', { class: 'btn btn-gray', onClick: async () => { await Promise.all([loadStats(), loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]); render(); showToast('Refreshed'); } }, '↻ Refresh'),
+        h('button', { class: 'btn btn-gray', onClick: async () => { await Promise.all([loadStats(), loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport(), loadServices(), loadAdmins()]); render(); showToast('Refreshed'); } }, '↻ Refresh'),
         h('span', { style: { color: '#71717a', fontSize: '12px' } }, adminEmail)
       )
     ),
@@ -380,7 +500,7 @@ function render() {
 if (adminEmail) {
   (async () => {
     await loadStats();
-    if (stats) { await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]); }
+    if (stats) { await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport(), loadServices(), loadAdmins()]); }
     render();
   })();
 } else { render(); }
