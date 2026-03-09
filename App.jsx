@@ -691,11 +691,11 @@ const GigCard = ({ gig, designer, rating, isCust, onAccept, onDeliver, onRate, u
 };
 
 // ─── CREATE GIG ─────────────────────────────────────────────────────────────
-const CreateGig = ({ onSubmit, onBack }) => {
+const CreateGig = ({ onSubmit, onBack, customerId }) => {
   const [selected, setSelected] = useState([]); // array of service names
   const [brief, setBrief] = useState("");
   const [tier, setTier] = useState("");
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // Start at step 0 — company selection
   const [loading, setLoading] = useState(false);
   const [openCats, setOpenCats] = useState([]);
   const [briefStyle, setBriefStyle] = useState([]);
@@ -704,6 +704,25 @@ const CreateGig = ({ onSubmit, onBack }) => {
   const [briefMood, setBriefMood] = useState([]);
   const [briefAudience, setBriefAudience] = useState([]);
   const [briefFormat, setBriefFormat] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [showNewCompany, setShowNewCompany] = useState(false);
+  const [newComp, setNewComp] = useState({ company_name: "", company_email: "" });
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      if (customerId) {
+        const r = await api("get_companies", { customer_id: customerId }, "GET");
+        if (r.companies) {
+          setCompanies(r.companies);
+          const def = r.companies.find(c => c.is_default);
+          if (def) setSelectedCompany(def);
+        }
+      }
+      setLoadingCompanies(false);
+    })();
+  }, [customerId]);
 
   const toggleCat = c => setOpenCats(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
   const toggleSvc = name => setSelected(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
@@ -723,11 +742,12 @@ const CreateGig = ({ onSubmit, onBack }) => {
 
   const go = () => {
     setLoading(true);
-    // Compile structured brief
     const parts = [];
+    if (selectedCompany) parts.push(`Company: ${selectedCompany.company_name}`);
     if (briefStyle.length) parts.push(`Style: ${briefStyle.join(", ")}`);
     if (briefColor) {
       if (briefColor === "custom" && briefCustomColors) parts.push(`Colors: Custom — ${briefCustomColors}`);
+      else if (briefColor === "brand" && selectedCompany?.brand_colors) parts.push(`Colors: Brand — ${selectedCompany.brand_colors}`);
       else if (briefColor === "brand") parts.push("Colors: Use my brand colors");
       else parts.push(`Colors: ${briefColor}`);
     }
@@ -744,7 +764,19 @@ const CreateGig = ({ onSubmit, onBack }) => {
       brief: compiledBrief,
       turnaround: parseInt(tier),
       price: total,
+      company_profile_id: selectedCompany?.id,
     });
+  };
+
+  const createQuickCompany = async () => {
+    if (!newComp.company_name || !newComp.company_email) return;
+    const r = await api("create_company", { customer_id: customerId, ...newComp });
+    if (r.company) {
+      setCompanies(prev => [...prev, r.company]);
+      setSelectedCompany(r.company);
+      setShowNewCompany(false);
+      setNewComp({ company_name: "", company_email: "" });
+    }
   };
 
   if (loading) return <Spinner text="Finding your designer..." />;
@@ -753,10 +785,65 @@ const CreateGig = ({ onSubmit, onBack }) => {
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: X.gray, fontSize: 13, fontFamily: "Outfit", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>← Back</button>
       <H s={22}>Submit a Gig</H>
-      <T dim style={{ marginBottom: 20 }}>Select one or more services</T>
+      <T dim style={{ marginBottom: 20 }}>{step === 0 ? "Which company is this for?" : "Select one or more services"}</T>
       <div style={{ display: "flex", gap: 5, marginBottom: 24 }}>
-        {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= step ? X.orange : X.border }} />)}
+        {[0, 1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= step ? X.orange : X.border }} />)}
       </div>
+
+      {/* Step 0: Company Selection */}
+      {step === 0 && (
+        <div>
+          <H s={15} style={{ marginBottom: 10 }}>Select a company</H>
+          {loadingCompanies ? <Spinner text="Loading companies..." /> : (
+            <>
+              {companies.length === 0 && !showNewCompany && (
+                <Card style={{ textAlign: "center", padding: 24, marginBottom: 14 }}>
+                  <T dim style={{ marginBottom: 10 }}>No company profiles yet. Create one to get started.</T>
+                  <Btn sm onClick={() => setShowNewCompany(true)}>+ Create Company Profile</Btn>
+                </Card>
+              )}
+
+              {companies.map(c => (
+                <Card key={c.id} onClick={() => setSelectedCompany(c)} style={{
+                  cursor: "pointer", padding: 14, marginBottom: 8,
+                  border: selectedCompany?.id === c.id ? `2px solid ${X.orange}` : `1px solid ${X.border}`,
+                  background: selectedCompany?.id === c.id ? X.orangeDim : X.card,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <T style={{ color: X.white, fontWeight: 700 }}>{c.company_name}</T>
+                        {c.is_default && <Pill color={X.green}>Default</Pill>}
+                      </div>
+                      <T sm dim>{[c.company_email, c.company_phone].filter(Boolean).join(" · ") || "No contact details"}</T>
+                      {c.brand_colors && <div style={{ display: "flex", gap: 3, marginTop: 4 }}>{c.brand_colors.split(",").map((col, i) => { const hex = col.trim().match(/#[0-9a-fA-F]{3,6}/)?.[0]; return hex ? <div key={i} style={{ width: 14, height: 14, borderRadius: 3, background: hex, border: `1px solid ${X.border}` }} /> : null; })}</div>}
+                    </div>
+                    {selectedCompany?.id === c.id && <div style={{ color: X.orange, fontSize: 18 }}>✓</div>}
+                  </div>
+                </Card>
+              ))}
+
+              {/* Quick create */}
+              {showNewCompany ? (
+                <Card style={{ padding: 14, marginBottom: 8, borderTop: `2px solid ${X.orange}` }}>
+                  <T sm style={{ color: X.orange, fontWeight: 600, marginBottom: 8 }}>NEW COMPANY</T>
+                  <Field label="Company Name *" value={newComp.company_name} onChange={v => setNewComp(p => ({ ...p, company_name: v }))} placeholder="Acme (Pty) Ltd" />
+                  <Field label="Email *" value={newComp.company_email} onChange={v => setNewComp(p => ({ ...p, company_email: v }))} placeholder="info@company.co.za" />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Btn sm onClick={createQuickCompany} disabled={!newComp.company_name || !newComp.company_email}>Create & Select</Btn>
+                    <Btn sm v="ghost" onClick={() => setShowNewCompany(false)}>Cancel</Btn>
+                  </div>
+                </Card>
+              ) : (
+                <button onClick={() => setShowNewCompany(true)} style={{ background: "none", border: `1px dashed ${X.border}`, borderRadius: 8, padding: 14, width: "100%", cursor: "pointer", color: X.gray, fontFamily: "Outfit", fontWeight: 600, fontSize: 13, marginBottom: 8 }}>+ Add a new company</button>
+              )}
+
+              <Btn sm onClick={() => setStep(1)} disabled={!selectedCompany} style={{ marginTop: 8 }}>Next →</Btn>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Brief summary in step 3 */}
 
       {/* Step 1: Pick services (multi-select across all categories) */}
@@ -831,6 +918,7 @@ const CreateGig = ({ onSubmit, onBack }) => {
           )}
 
           <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+            <Btn v="ghost" sm onClick={() => setStep(0)}>Back</Btn>
             <Btn sm onClick={() => setStep(2)} disabled={selected.length === 0}>Next →</Btn>
           </div>
         </div>
@@ -978,6 +1066,7 @@ const CreateGig = ({ onSubmit, onBack }) => {
           {tier && (
             <Card style={{ marginBottom: 14, background: X.bg, padding: 14 }}>
               <T dim sm style={{ marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Order Summary</T>
+              {selectedCompany && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${X.border}` }}><T sm dim>Company</T><T sm style={{ color: X.white, fontWeight: 600 }}>{selectedCompany.company_name}</T></div>}
               {selected.map(name => {
                 const svc = ALL_SERVICES.find(s => s.name === name);
                 return (
@@ -1446,7 +1535,7 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
         <div style={{ padding: 14, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${accent}, ${isCust ? X.orangeLight : X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 12, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</T><Pill color={accent}>{role}</Pill></div></div></div>
         <div style={{ padding: "8px 6px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={accent} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
         {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => {
-          if (!profile.company_name) { setSection("profile"); setShowCreate(false); setSelectedGig(null); alert("Please complete your Business Profile before submitting a gig. We need at least your company name and email."); return; }
+          
           setShowCreate(true); setSelectedGig(null);
         }}>+ New Gig</Btn></div>}
         <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer", padding: "6px 0" }}>Sign out</button></div>
@@ -1462,14 +1551,14 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
           {loading && <Spinner />}
           {rateGig && <RateModal gigId={rateGig.id} designerId={rateGig.designer_id} onDone={rateSubmit} onClose={() => setRateGig(null)} />}
 
-          {!loading && showCreate && <CreateGig onSubmit={(data) => { createGig(data); setShowCreate(false); }} onBack={() => setShowCreate(false)} />}
+          {!loading && showCreate && <CreateGig customerId={profile.id} onSubmit={(data) => { createGig(data); setShowCreate(false); }} onBack={() => setShowCreate(false)} />}
 
           {!loading && !showCreate && selectedGig && <ProjectView gig={selectedGig} designer={designers.find(d => d.id === selectedGig.designer_id)} rating={ratings.find(r => r.gig_id === selectedGig.id)} isCust={isCust} userId={profile.id} userName={profile.name} onBack={() => setSelectedGig(null)} onRate={(id) => setRateGig({ id, designer_id: selectedGig.designer_id, service: selectedGig.service })} onDeliver={deliverGig} onAccept={acceptGig} onRefresh={async () => { await load(); setSelectedGig(null); }} />}
 
           {!loading && !showCreate && !selectedGig && section === "projects" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><H s={20}>{isCust ? "My Projects" : "My Gigs"}</H>{isCust && <Btn sm onClick={() => {
-                if (!profile.company_name) { setSection("profile"); setShowCreate(false); alert("Please complete your Business Profile first."); return; }
+                
                 setShowCreate(true);
               }}>+ New Gig</Btn>}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
