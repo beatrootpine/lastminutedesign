@@ -59,7 +59,7 @@ const h = (tag, attrs, ...kids) => {
 let adminEmail = localStorage.getItem('lmd_admin_email');
 let section = 'overview';
 let stats = null;
-let customers = []; let designers = []; let gigs = []; let payoutData = [];
+let customers = []; let designers = []; let gigs = []; let payoutData = []; let supportTickets = [];
 let toast = '';
 
 const api = async (action, data = {}, method = 'POST') => {
@@ -79,6 +79,9 @@ const loadCustomers = async () => { const r = await api('get_customers', {}, 'GE
 const loadDesigners = async () => { const r = await api('get_designers', {}, 'GET'); if (r.designers) designers = r.designers; };
 const loadGigs = async () => { const r = await api('get_all_gigs', {}, 'GET'); if (r.gigs) gigs = r.gigs; };
 const loadPayouts = async () => { const r = await api('get_payout_queue', {}, 'GET'); if (r.designers) payoutData = r.designers; };
+const loadSupport = async () => { const r = await api('get_support_tickets', {}, 'GET'); if (r.tickets) supportTickets = r.tickets; };
+const markReplied = async (id) => { await api('reply_support', { ticket_id: id, status: 'replied' }); showToast('Marked as replied'); await loadSupport(); render(); };
+const closeTicket = async (id) => { await api('close_support', { ticket_id: id }); showToast('Ticket closed'); await loadSupport(); render(); };
 
 const deleteCustomer = async (id) => { if (!confirm('Delete this customer and all their gigs?')) return; await api('delete_customer', { customer_id: id }); showToast('Customer deleted'); await loadCustomers(); await loadStats(); render(); };
 const deleteDesigner = async (id) => { if (!confirm('Delete this designer?')) return; await api('delete_designer', { designer_id: id }); showToast('Designer deleted'); await loadDesigners(); await loadStats(); render(); };
@@ -103,7 +106,7 @@ function renderLogin() {
           localStorage.setItem('lmd_admin_email', email);
           await loadStats();
           if (!stats) { showToast('Not an admin'); adminEmail = null; localStorage.removeItem('lmd_admin_email'); render(); return; }
-          await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]);
+          await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]);
           render();
         }}, 'Sign In')
       )
@@ -126,6 +129,7 @@ function render() {
     { icon: '📋', label: 'Gigs', key: 'gigs' },
     { icon: '💸', label: 'Payouts', key: 'payouts' },
     { icon: '🟢', label: 'Online Now', key: 'online' },
+    { icon: '🎫', label: 'Support', key: 'support' },
   ];
 
   const sidebar = h('div', { class: 'side' },
@@ -313,11 +317,56 @@ function render() {
     }
   }
 
+  // SUPPORT
+  if (section === 'support') {
+    const open = supportTickets.filter(t => t.status === 'open');
+    const replied = supportTickets.filter(t => t.status === 'replied');
+    const closed = supportTickets.filter(t => t.status === 'closed');
+
+    content.append(h('h2', null, `Support Tickets (${supportTickets.length})`));
+
+    const sg = h('div', { class: 'grid g3', style: { marginBottom: '20px' } });
+    [
+      { l: 'Open', v: open.length, c: '#ef4444' },
+      { l: 'Replied', v: replied.length, c: '#eab308' },
+      { l: 'Closed', v: closed.length, c: '#22c55e' },
+    ].forEach(s => sg.append(h('div', { class: 'card stat' }, h('div', { class: 'stat-val', style: { color: s.c } }, String(s.v)), h('div', { class: 'stat-lbl' }, s.l))));
+    content.append(sg);
+
+    if (supportTickets.length === 0) {
+      content.append(h('div', { class: 'card', style: { textAlign: 'center', padding: '40px' } }, h('div', { style: { color: '#71717a' } }, 'No support tickets yet')));
+    } else {
+      supportTickets.forEach(t => {
+        const statusColor = { open: '#ef4444', replied: '#eab308', closed: '#22c55e' }[t.status] || '#71717a';
+        const card = h('div', { class: 'card', style: { marginBottom: '10px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' } },
+            h('div', null,
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' } },
+                h('span', { class: 'pill', style: { background: statusColor + '18', color: statusColor, border: '1px solid ' + statusColor + '30' } }, t.status),
+                h('span', { class: 'pill', style: { background: (t.user_role === 'designer' ? '#06b6d4' : '#f97316') + '18', color: t.user_role === 'designer' ? '#06b6d4' : '#f97316', border: '1px solid ' + (t.user_role === 'designer' ? '#06b6d4' : '#f97316') + '30' } }, t.user_role)
+              ),
+              h('div', { style: { color: '#fff', fontWeight: 700, fontFamily: 'Outfit', fontSize: '14px' } }, t.subject || 'General'),
+              h('div', { style: { color: '#a1a1aa', fontSize: '12px', marginTop: '2px' } }, t.user_name + ' · ' + t.user_email)
+            ),
+            h('div', { style: { color: '#71717a', fontSize: '11px', textAlign: 'right', flexShrink: 0 } }, new Date(t.created_at).toLocaleDateString('en-ZA') + '\n' + new Date(t.created_at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }))
+          ),
+          h('div', { style: { padding: '10px 12px', background: '#09090b', borderRadius: '6px', color: '#a1a1aa', fontSize: '13px', lineHeight: '1.5', marginBottom: '10px' } }, t.message),
+          h('div', { style: { display: 'flex', gap: '6px' } },
+            t.status === 'open' ? h('button', { class: 'btn btn-orange', onClick: () => markReplied(t.id) }, 'Mark Replied') : null,
+            t.status !== 'closed' ? h('button', { class: 'btn btn-green', onClick: () => closeTicket(t.id) }, 'Close Ticket') : h('span', { style: { color: '#22c55e', fontSize: '11px' } }, '✓ Closed'),
+            h('a', { href: 'mailto:' + t.user_email + '?subject=Re: ' + (t.subject || 'Support'), style: { textDecoration: 'none' } }, h('button', { class: 'btn btn-gray' }, '✉ Reply via Email'))
+          )
+        );
+        content.append(card);
+      });
+    }
+  }
+
   const main = h('div', { class: 'main' },
     h('div', { class: 'top' },
       h('div', { style: { fontFamily: 'Outfit', fontWeight: 700, fontSize: '14px', color: '#fff' } }, '⚙️ Admin Panel'),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-        h('button', { class: 'btn btn-gray', onClick: async () => { await Promise.all([loadStats(), loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]); render(); showToast('Refreshed'); } }, '↻ Refresh'),
+        h('button', { class: 'btn btn-gray', onClick: async () => { await Promise.all([loadStats(), loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]); render(); showToast('Refreshed'); } }, '↻ Refresh'),
         h('span', { style: { color: '#71717a', fontSize: '12px' } }, adminEmail)
       )
     ),
@@ -331,7 +380,7 @@ function render() {
 if (adminEmail) {
   (async () => {
     await loadStats();
-    if (stats) { await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts()]); }
+    if (stats) { await Promise.all([loadCustomers(), loadDesigners(), loadGigs(), loadPayouts(), loadSupport()]); }
     render();
   })();
 } else { render(); }
