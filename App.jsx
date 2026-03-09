@@ -693,6 +693,8 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
   const [showNewCompany, setShowNewCompany] = useState(false);
   const [newComp, setNewComp] = useState({ company_name: "", company_email: "" });
   const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [customDate, setCustomDate] = useState("");
+  const [customTime, setCustomTime] = useState("17:00");
 
   useEffect(() => {
     (async () => {
@@ -714,6 +716,13 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
   // Calculate total price for selected services at chosen tier
   const getTotal = (t) => {
     if (!t) return 0;
+    if (t === "custom") {
+      // Custom pricing = 24h rate (best value for customer, same margin for us)
+      return selected.reduce((sum, name) => {
+        const svc = ALL_SERVICES.find(s => s.name === name);
+        return sum + (svc ? svc.prices[24] : 0);
+      }, 0);
+    }
     return selected.reduce((sum, name) => {
       const svc = ALL_SERVICES.find(s => s.name === name);
       return sum + (svc ? svc.prices[t] : 0);
@@ -721,6 +730,7 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
   };
 
   const total = getTotal(tier);
+  const customHours = customDate ? Math.max(1, Math.round((new Date(`${customDate}T${customTime}`).getTime() - Date.now()) / 3600000)) : 0;
   const serviceLabel = selected.length === 1 ? selected[0] : `${selected.length} services`;
   const category = selected.length > 0 ? Object.entries(SERVICES).find(([, items]) => items.some(i => i.name === selected[0]))?.[0] || "" : "";
 
@@ -746,9 +756,10 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
       services: selected,
       category,
       brief: compiledBrief,
-      turnaround: parseInt(tier),
+      turnaround: tier === "custom" ? customHours : parseInt(tier),
       price: total,
       company_profile_id: selectedCompany?.id,
+      customDeadline: tier === "custom" ? `${customDate}T${customTime}` : null,
     });
   };
 
@@ -1032,19 +1043,59 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
                 <button key={h} onClick={() => setTier(h)} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "13px 14px", borderRadius: 8,
-                  background: tier === h ? X.orangeDim : X.card,
-                  border: tier === h ? `2px solid ${X.orange}` : `1px solid ${X.border}`,
+                  background: tier === h ? (X.bg === "#ffffff" ? X.accentDim || "rgba(10,10,10,0.04)" : "rgba(255,255,255,0.04)") : X.card,
+                  border: tier === h ? `2px solid ${X.white}` : `1px solid ${X.border}`,
                   cursor: "pointer",
                 }}>
                   <div style={{ textAlign: "left" }}>
                     <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 14, color: X.white, marginBottom: 2 }}>{h} Hours</div>
                     <Pill color={h === "4" ? X.red : h === "12" ? X.yellow : X.green}>{tag}</Pill>
                   </div>
-                  <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.orange }}>R{tierTotal.toLocaleString()}</div>
+                  <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.white }}>R{tierTotal.toLocaleString()}</div>
                 </button>
               );
             })}
+
+            {/* Custom date/time option */}
+            <button onClick={() => setTier("custom")} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "13px 14px", borderRadius: 8,
+              background: tier === "custom" ? (X.bg === "#ffffff" ? "rgba(10,10,10,0.04)" : "rgba(255,255,255,0.04)") : X.card,
+              border: tier === "custom" ? `2px solid ${X.white}` : `1px solid ${X.border}`,
+              cursor: "pointer",
+            }}>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontFamily: "Outfit", fontWeight: 700, fontSize: 14, color: X.white, marginBottom: 2 }}>Custom Deadline</div>
+                <Pill color={X.gray}>FLEXIBLE</Pill>
+              </div>
+              <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 20, color: X.white }}>R{getTotal("custom").toLocaleString()}</div>
+            </button>
           </div>
+
+          {/* Custom date/time picker */}
+          {tier === "custom" && (
+            <Card style={{ marginBottom: 14, padding: 14, borderTop: `2px solid ${X.white}` }}>
+              <T sm style={{ color: X.white, fontWeight: 600, marginBottom: 10 }}>SET YOUR DEADLINE</T>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 500, color: X.gray, fontFamily: "Inter", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</label>
+                  <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} min={new Date().toISOString().split("T")[0]} style={{ width: "100%", background: X.inputBg, border: `1px solid ${X.border}`, borderRadius: 6, padding: "9px 12px", color: X.white, fontFamily: "Inter", fontSize: 13, outline: "none", colorScheme: X.bg === "#000000" ? "dark" : "light" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 500, color: X.gray, fontFamily: "Inter", textTransform: "uppercase", letterSpacing: "0.05em" }}>Time</label>
+                  <input type="time" value={customTime} onChange={e => setCustomTime(e.target.value)} style={{ width: "100%", background: X.inputBg, border: `1px solid ${X.border}`, borderRadius: 6, padding: "9px 12px", color: X.white, fontFamily: "Inter", fontSize: 13, outline: "none", colorScheme: X.bg === "#000000" ? "dark" : "light" }} />
+                </div>
+              </div>
+              {customDate && customHours > 0 && (
+                <T sm style={{ color: X.grayLight, marginTop: 8 }}>
+                  Deadline: {new Date(`${customDate}T${customTime}`).toLocaleString("en-ZA", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} — <span style={{ color: X.white, fontWeight: 600 }}>{customHours}h from now</span>
+                </T>
+              )}
+              {customDate && customHours <= 0 && (
+                <T sm style={{ color: X.red, marginTop: 8 }}>Deadline must be in the future</T>
+              )}
+            </Card>
+          )}
 
           {/* Order summary */}
           {tier && (
@@ -1062,7 +1113,7 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
               })}
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, paddingTop: 4 }}>
                 <T dim sm>Turnaround</T>
-                <T sm style={{ color: X.white }}>{tier}h — {TIERS[tier]?.tag}</T>
+                <T sm style={{ color: X.white }}>{tier === "custom" ? `Custom — ${customDate ? new Date(`${customDate}T${customTime}`).toLocaleDateString("en-ZA", { day: "numeric", month: "short" }) + " " + customTime : "Not set"}` : `${tier}h — ${TIERS[tier]?.tag}`}</T>
               </div>
 
               {/* Brief summary */}
@@ -1087,7 +1138,7 @@ const CreateGig = ({ onSubmit, onBack, customerId }) => {
 
           <div style={{ display: "flex", gap: 6 }}>
             <Btn v="ghost" sm onClick={() => setStep(2)}>Back</Btn>
-            <Btn sm onClick={go} disabled={!tier}>Submit Gig — R{total.toLocaleString()} →</Btn>
+            <Btn sm onClick={go} disabled={!tier || (tier === "custom" && (!customDate || customHours <= 0))}>Submit Gig — R{total.toLocaleString()} →</Btn>
           </div>
         </div>
       )}
@@ -1547,13 +1598,13 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
               }}>+ New Gig</Btn>}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 20 }}>{[{ l: "Active", v: active.length, c: accent }, { l: "Delivered", v: delivered.length, c: X.green }, { l: "Done", v: completed.length, c: X.grayLight }, { l: isCust ? "Spent" : "Earned", v: `R${Math.round(earned).toLocaleString()}`, c: isCust ? X.orangeLight : X.tealLight }].map(s => <Card key={s.l} style={{ textAlign: "center", padding: 10 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: s.c }}>{s.v}</div><T sm dim>{s.l}</T></Card>)}</div>
               {gigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No projects yet</T>{isCust && <Btn sm onClick={() => setShowCreate(true)} style={{ marginTop: 10 }}>Submit your first gig</Btn>}</Card> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: accent, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{gigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={{ pending: X.yellow, in_progress: accent, delivered: X.green, completed: X.green }[g.status]||X.gray}>{g.status.replace("_"," ")}</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag || g.turnaround + 'h'}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,60)}{g.brief.length>60?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: accent }}>R{g.price?.toLocaleString()}</div><T sm dim>{new Date(g.created_at).toLocaleDateString("en-ZA")}</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: accent, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>
               )}
             </div>
           )}
 
           {!loading && !showCreate && !selectedGig && section === "available" && !isCust && (
-            <div><H s={20} style={{ marginBottom: 16 }}>Available Gigs</H>{availGigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No gigs right now</T></Card> : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{availGigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={X.yellow}>New</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,80)}{g.brief.length>80?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.teal }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</div><T sm dim>your earnings</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: X.teal, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>}</div>
+            <div><H s={20} style={{ marginBottom: 16 }}>Available Gigs</H>{availGigs.length === 0 ? <Card style={{ textAlign: "center", padding: 36 }}><T dim>No gigs right now</T></Card> : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{availGigs.map(g => <Card key={g.id} onClick={() => setSelectedGig(g)} style={{ cursor: "pointer", padding: 16 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ display: "flex", gap: 4, marginBottom: 4 }}><Pill color={X.yellow}>New</Pill><Pill color={g.turnaround===4?X.red:g.turnaround===12?X.yellow:X.green}>{TIERS[g.turnaround]?.tag || g.turnaround + 'h'}</Pill></div><T style={{ color: X.white, fontWeight: 600 }}>{g.service}</T>{g.brief && <T sm dim style={{ marginTop: 2 }}>{g.brief.slice(0,80)}{g.brief.length>80?"...":""}</T>}</div><div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}><div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.teal }}>R{Math.round((g.price||0)*0.75).toLocaleString()}</div><T sm dim>your earnings</T><span style={{ fontSize: 11, fontFamily: "Outfit", fontWeight: 600, color: X.teal, display: "flex", alignItems: "center", gap: 4 }}>View Details →</span></div></div></Card>)}</div>}</div>
           )}
 
           {!loading && !showCreate && !selectedGig && section === "profile" && isCust && <CustProfile customer={profile} onUpdate={onUpdateProfile} />}
