@@ -173,6 +173,72 @@ export default async function handler(req, res) {
         return res.json({ success: true });
       }
 
+      // ─── SERVICES & PRICING ─────────────────────────────────────
+      case "get_services": {
+        const services = await db("services?order=sort_order.asc");
+        return res.json({ services });
+      }
+
+      case "create_service": {
+        const { category, name, price_4h, price_12h, price_24h, sort_order } = req.body;
+        const s = await db("services", { method: "POST", body: { category, name, price_4h, price_12h, price_24h, sort_order: sort_order || 99 } });
+        return res.json({ service: s[0] });
+      }
+
+      case "update_service": {
+        const { service_id, ...fields } = req.body;
+        const allowed = ["category", "name", "price_4h", "price_12h", "price_24h", "is_active", "sort_order"];
+        const clean = {};
+        for (const k of allowed) { if (fields[k] !== undefined) clean[k] = fields[k]; }
+        await db(`services?id=eq.${service_id}`, { method: "PATCH", body: clean });
+        return res.json({ success: true });
+      }
+
+      case "delete_service": {
+        const { service_id } = req.body;
+        await db(`services?id=eq.${service_id}`, { method: "DELETE", prefer: "return=minimal" });
+        return res.json({ success: true });
+      }
+
+      // ─── MANUAL USER CREATION ──────────────────────────────────
+      case "create_user": {
+        const { email, name, role: userRole, city, skills, password } = req.body;
+        // Create auth user via Supabase Admin API
+        const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const authRes = await fetch(`${SUPA}/auth/v1/admin/users`, {
+          method: "POST",
+          headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: password || "Welcome123!", email_confirm: true }),
+        });
+        const authData = await authRes.json();
+        if (!authRes.ok) throw new Error(authData.msg || authData.message || "Failed to create auth user");
+        const userId = authData.id;
+
+        if (userRole === "customer") {
+          const c = await db("customers", { method: "POST", body: { id: userId, email, name } });
+          return res.json({ success: true, role: "customer", profile: c[0] });
+        } else if (userRole === "designer") {
+          const initials = (name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+          const d = await db("designers", { method: "POST", body: { id: userId, email, name, city: city || "", skills: skills || [], avatar_initials: initials, is_online: false, is_approved: true } });
+          return res.json({ success: true, role: "designer", profile: d[0] });
+        } else if (userRole === "admin") {
+          const a = await db("admins", { method: "POST", body: { email, name } });
+          return res.json({ success: true, role: "admin", admin: a[0] });
+        }
+        return res.json({ error: "Invalid role" });
+      }
+
+      case "get_admins": {
+        const admins = await db("admins?order=created_at.desc");
+        return res.json({ admins });
+      }
+
+      case "delete_admin": {
+        const { admin_id } = req.body;
+        await db(`admins?id=eq.${admin_id}`, { method: "DELETE", prefer: "return=minimal" });
+        return res.json({ success: true });
+      }
+
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
