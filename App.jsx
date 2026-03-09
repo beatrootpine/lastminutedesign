@@ -72,6 +72,16 @@ const CSS = `
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+input,textarea,select,button{font-size:16px !important}
+@media(max-width:640px){
+  .hide-mobile{display:none !important}
+  .stack-mobile{flex-direction:column !important}
+  .full-mobile{width:100% !important;min-width:0 !important}
+  .grid-1-mobile{grid-template-columns:1fr !important}
+  .pad-mobile{padding:12px !important}
+  .gap-mobile{gap:6px !important}
+  .text-sm-mobile{font-size:12px !important}
+}
 `;
 
 const themes = {
@@ -232,14 +242,14 @@ const Toasty = ({ msg, onClose }) => { useEffect(() => { const t = setTimeout(on
 const Spinner = ({ text }) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 14 }}><div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.orange, animation: "spin 0.8s linear infinite" }} /><T dim>{text || "Loading..."}</T></div>;
 
 // ─── LAYOUT ─────────────────────────────────────────────────────────────────
-const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: X.navBg, backdropFilter: "blur(20px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 16, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>{!minimal && <div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log in</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
+const Nav = ({ go, minimal }) => <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", background: X.navBg, backdropFilter: "blur(20px)", borderBottom: `1px solid ${X.border}` }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, cursor: "pointer", letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>{!minimal && <div style={{ display: "flex", gap: 6 }}><Btn v="ghost" sm onClick={() => go("customer-login")}>Log in</Btn><Btn sm onClick={() => go("customer-signup")}>Register</Btn></div>}</nav>;
 
 const Shell = ({ children, role, go }) => <div style={{ minHeight: "100vh", background: X.bg }}><nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 28px", background: "rgba(9,9,11,0.9)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 100 }}><span onClick={() => go("landing")} style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, cursor: "pointer" }}><span style={{ color: X.orange }}>lastminute</span>.design</span><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Pill color={role === "designer" ? X.teal : X.orange}>{role}</Pill><button onClick={() => go("landing")} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button></div></nav><div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px" }}>{children}</div></div>;
 
 // ─── LANDING ────────────────────────────────────────────────────────────────
 const Landing = ({ go }) => {
   const [openCat, setOpenCat] = useState(null);
-  const Section = ({ children, style: s }) => <div style={{ maxWidth: 800, margin: "0 auto", padding: "80px 20px", ...s }}>{children}</div>;
+  const Section = ({ children, style: s }) => <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 16px", ...s }}>{children}</div>;
   const SectionLabel = ({ children }) => <Pill>{children}</Pill>;
   const SectionH = ({ children }) => <h2 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "clamp(26px, 4vw, 38px)", color: X.white, letterSpacing: "-0.03em", lineHeight: 1.15, margin: "14px 0 10px" }}>{children}</h2>;
   const SectionP = ({ children }) => <p style={{ fontSize: 16, color: X.grayLight, lineHeight: 1.6, maxWidth: 540 }}>{children}</p>;
@@ -251,17 +261,16 @@ const Landing = ({ go }) => {
 
       {/* ─── HERO BANNER ─── */}
       <div style={{
-        position: "relative", overflow: "hidden", minHeight: 580,
+        position: "relative", overflow: "hidden", minHeight: "70vh",
         display: "flex", alignItems: "center",
-        padding: "100px 20px 60px",
-        background: X.bg,
+        padding: "80px 16px 40px",
       }}>
-        {/* Background image using img for reliability */}
+        {/* Background image */}
         <img src="/hero-bg.jpg" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center right" }} onError={(e) => { e.target.style.display = "none"; }} />
         {/* Overlay */}
         <div style={{ position: "absolute", inset: 0, background: X.bg === "#ffffff"
-          ? "linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 35%, rgba(255,255,255,0.4) 60%, transparent 100%)"
-          : "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.4) 60%, transparent 100%)"
+          ? "linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.5) 70%, rgba(255,255,255,0.3) 100%)"
+          : "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.3) 100%)"
         }} />
 
         {/* Content — left aligned */}
@@ -288,8 +297,8 @@ const Landing = ({ go }) => {
       </div>
 
       {/* ─── TRUST BAR ─── */}
-      <div style={{ borderTop: `1px solid ${X.border}`, borderBottom: `1px solid ${X.border}`, padding: "20px 20px", marginTop: 40 }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap" }}>
+      <div style={{ borderTop: `1px solid ${X.border}`, borderBottom: `1px solid ${X.border}`, padding: "16px", marginTop: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, maxWidth: 600, margin: "0 auto" }}>
           {[["247+", "Vetted Designers"], ["1,200+", "Gigs Delivered"], ["4.8★", "Avg Rating"], ["98%", "On-Time Delivery"]].map(([v, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 22, color: X.orange }}>{v}</div>
@@ -457,13 +466,13 @@ const Landing = ({ go }) => {
               </button>
               {openCat === cat && (
                 <div style={{ border: `1px solid ${X.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "7px 16px", background: X.bg }}><T sm dim>Service</T><T sm dim style={{ textAlign: "right" }}>4h</T><T sm dim style={{ textAlign: "right" }}>12h</T><T sm dim style={{ textAlign: "right" }}>24h</T></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 60px", padding: "7px 12px", background: X.bg }}><T sm dim>Service</T><T sm dim style={{ textAlign: "right" }}>4h</T><T sm dim style={{ textAlign: "right" }}>12h</T><T sm dim style={{ textAlign: "right" }}>24h</T></div>
                   {items.map((item, i) => (
-                    <div key={item.name} style={{ display: "grid", gridTemplateColumns: "1fr 72px 72px 72px", padding: "9px 16px", background: i % 2 === 0 ? X.card : "transparent", borderTop: `1px solid ${X.border}` }}>
-                      <T style={{ color: X.white, fontSize: 13 }}>{item.name}</T>
-                      <T sm style={{ textAlign: "right", color: X.orangeLight }}>R{item.prices[4].toLocaleString()}</T>
-                      <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[12].toLocaleString()}</T>
-                      <T sm style={{ textAlign: "right", color: X.grayLight }}>R{item.prices[24].toLocaleString()}</T>
+                    <div key={item.name} style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 60px", padding: "9px 12px", background: i % 2 === 0 ? X.card : "transparent", borderTop: `1px solid ${X.border}` }}>
+                      <T style={{ color: X.white, fontSize: 12 }}>{item.name}</T>
+                      <T sm style={{ textAlign: "right", color: X.grayLight, fontSize: 11 }}>R{item.prices[4].toLocaleString()}</T>
+                      <T sm style={{ textAlign: "right", color: X.grayLight, fontSize: 11 }}>R{item.prices[12].toLocaleString()}</T>
+                      <T sm style={{ textAlign: "right", color: X.grayLight, fontSize: 11 }}>R{item.prices[24].toLocaleString()}</T>
                     </div>
                   ))}
                 </div>
@@ -488,13 +497,12 @@ const Landing = ({ go }) => {
       </div>
 
       {/* ─── FOOTER ─── */}
-      <div style={{ borderTop: `1px solid ${X.border}`, padding: "32px 20px", textAlign: "center" }}>
-        <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 18, color: X.white, marginBottom: 12 }}>
-          <span style={{ color: X.orange }}>lastminute</span>.design
+      <div style={{ borderTop: `1px solid ${X.border}`, padding: "28px 16px", textAlign: "center" }}>
+        <div style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, marginBottom: 10 }}>
+          lastminute<span style={{ fontWeight: 400 }}>.design</span>
         </div>
-        <T dim sm>24/7 Rush Creative Studio · Based in South Africa</T>
-        <T dim sm style={{ marginTop: 4 }}>hello@lastminutedesigns.co.za · +27 82 000 0000</T>
-        <T dim sm style={{ marginTop: 12 }}>© {new Date().getFullYear()} Last Minute Designs. All rights reserved.</T>
+        <T dim sm>24/7 Rush Creative Studio · South Africa</T>
+        <T dim sm style={{ marginTop: 10 }}>© {new Date().getFullYear()} Last Minute Designs</T>
       </div>
     </div>
   );
@@ -1562,27 +1570,44 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
     { icon: "💬", label: "Support", key: "support" },
   ];
 
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: X.bg }}>
-      {/* Sidebar */}
-      <div style={{ width: sideOpen ? 220 : 0, flexShrink: 0, background: X.card, borderRight: `1px solid ${X.border}`, transition: "width 0.2s", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "16px 14px", borderBottom: `1px solid ${X.border}` }}><span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 15, color: X.white, letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span></div>
-        <div style={{ padding: 14, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${accent}, ${isCust ? X.orangeLight : X.tealLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 12, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</T><Pill color={accent}>{role}</Pill></div></div></div>
-        <div style={{ padding: "8px 6px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={accent} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
-        {isCust && <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => {
-          
-          setShowCreate(true); setSelectedGig(null);
-        }}>+ New Gig</Btn></div>}
-        <div style={{ padding: "8px 10px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 12, fontFamily: "Inter", cursor: "pointer", padding: "6px 0" }}>Sign out</button></div>
-      </div>
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => { const h = () => setIsMobile(window.innerWidth < 640); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
 
-      {/* Main */}
-      <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: X.navBg, backdropFilter: "blur(10px)", zIndex: 50 }}>
-          <button onClick={() => setSideOpen(!sideOpen)} style={{ background: "none", border: "none", color: X.gray, fontSize: 18, cursor: "pointer" }}>☰</button>
-          {!isCust && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: profile.is_online ? X.green : X.gray }} /><T sm dim>{profile.is_online ? "Online" : "Offline"}</T></div>}
+  return (
+    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", minHeight: "100vh", background: X.bg }}>
+
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <div style={{ width: sideOpen ? 200 : 0, flexShrink: 0, background: X.card, borderRight: `1px solid ${X.border}`, transition: "width 0.2s", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "14px 12px", borderBottom: `1px solid ${X.border}` }}><span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white, letterSpacing: "-0.02em" }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span></div>
+          <div style={{ padding: 12, borderBottom: `1px solid ${X.border}` }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 28, height: 28, borderRadius: "50%", background: X.white, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit", fontWeight: 700, fontSize: 10, color: X.bg }}>{(profile.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2)}</div><div style={{ overflow: "hidden" }}><T sm style={{ color: X.white, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontSize: 12 }}>{profile.name}</T></div></div></div>
+          <div style={{ padding: "6px 4px", flex: 1 }}>{sideItems.map(i => <SideIcon key={i.key} icon={i.icon} label={i.label} active={section === i.key && !showCreate && !selectedGig} color={X.white} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} badge={i.badge} />)}</div>
+          {isCust && <div style={{ padding: "6px 8px", borderTop: `1px solid ${X.border}` }}><Btn full sm onClick={() => { setShowCreate(true); setSelectedGig(null); }}>+ New Gig</Btn></div>}
+          <div style={{ padding: "6px 8px", borderTop: `1px solid ${X.border}` }}><button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 11, fontFamily: "Inter", cursor: "pointer", padding: "4px 0" }}>Sign out</button></div>
         </div>
-        <div style={{ padding: "24px 20px", maxWidth: 860, margin: "0 auto" }}>
+      )}
+
+      {/* Main content */}
+      <div style={{ flex: 1, overflow: "auto", paddingBottom: isMobile ? 70 : 0 }}>
+        {/* Top bar */}
+        <div style={{ padding: isMobile ? "10px 14px" : "10px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: X.navBg, backdropFilter: "blur(10px)", zIndex: 50 }}>
+          {isMobile ? (
+            <>
+              <span style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: 14, color: X.white }}>lastminute<span style={{ fontWeight: 400 }}>.design</span></span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isCust && <Btn sm onClick={() => { setShowCreate(true); setSelectedGig(null); }}>+ New</Btn>}
+                <button onClick={onLogout} style={{ background: "none", border: "none", color: X.gray, fontSize: 11, fontFamily: "Inter", cursor: "pointer" }}>Sign out</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setSideOpen(!sideOpen)} style={{ background: "none", border: "none", color: X.gray, fontSize: 16, cursor: "pointer" }}>☰</button>
+              {!isCust && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: profile.is_online ? X.green : X.gray }} /><T sm dim>{profile.is_online ? "Online" : "Offline"}</T></div>}
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: isMobile ? "16px 14px" : "24px 20px", maxWidth: 860, margin: "0 auto" }}>
           {loading && <Spinner />}
           {rateGig && <RateModal gigId={rateGig.id} designerId={rateGig.designer_id} onDone={rateSubmit} onClose={() => setRateGig(null)} />}
 
@@ -1613,6 +1638,30 @@ const Dashboard = ({ role, profile, onLogout, createGig, acceptGig, deliverGig, 
           {!loading && !showCreate && !selectedGig && section === "support" && <SupportPage userId={profile.id} userRole={role} userName={profile.name} userEmail={profile.email} accent={accent} />}
         </div>
       </div>
+
+      {/* Mobile bottom nav */}
+      {isMobile && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+          background: X.card, borderTop: `1px solid ${X.border}`,
+          display: "flex", justifyContent: "space-around", alignItems: "center",
+          padding: "6px 0", paddingBottom: "max(6px, env(safe-area-inset-bottom))",
+        }}>
+          {sideItems.map(i => (
+            <button key={i.key} onClick={() => { setSection(i.key); setShowCreate(false); setSelectedGig(null); }} style={{
+              background: "none", border: "none", cursor: "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              padding: "4px 8px", borderRadius: 6, minWidth: 48,
+              color: section === i.key && !showCreate && !selectedGig ? X.white : X.gray,
+              opacity: section === i.key && !showCreate && !selectedGig ? 1 : 0.5,
+            }}>
+              <span style={{ fontSize: 18 }}>{i.icon}</span>
+              <span style={{ fontSize: 9, fontFamily: "Inter", fontWeight: 500 }}>{i.label}</span>
+              {i.badge > 0 && <span style={{ position: "absolute", top: 0, right: 2, background: X.red, color: "#fff", fontSize: 8, fontWeight: 700, padding: "0 4px", borderRadius: 100, fontFamily: "Inter" }}>{i.badge}</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -1668,7 +1717,7 @@ const AuthScreen = ({ go, onAuth, mode: im, role: ir }) => {
   const googleBtnStyle = { width: "100%", padding: "10px 16px", borderRadius: 8, border: `1px solid ${X.border}`, background: X.bg, color: X.white, fontFamily: "Inter", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 };
 
   return (
-    <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div style={{ minHeight: "100vh", background: X.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
       <div style={{ maxWidth: iDS ? 460 : 360, width: "100%" }}>
         <Nav go={go} minimal />
         <div style={{ paddingTop: 80 }}>
