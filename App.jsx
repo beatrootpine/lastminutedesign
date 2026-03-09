@@ -254,10 +254,11 @@ const Landing = ({ go }) => {
         position: "relative", overflow: "hidden", minHeight: 580,
         display: "flex", alignItems: "center",
         padding: "100px 20px 60px",
+        background: X.bg,
       }}>
-        {/* Background image */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url(/hero-bg.jpg)", backgroundSize: "cover", backgroundPosition: "center right", }} />
-        {/* Overlay — dark gradient from left for text readability */}
+        {/* Background image using img for reliability */}
+        <img src="/hero-bg.jpg" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center right" }} onError={(e) => { e.target.style.display = "none"; }} />
+        {/* Overlay */}
         <div style={{ position: "absolute", inset: 0, background: X.bg === "#ffffff"
           ? "linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 35%, rgba(255,255,255,0.4) 60%, transparent 100%)"
           : "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.4) 60%, transparent 100%)"
