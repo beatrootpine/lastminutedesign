@@ -256,6 +256,50 @@ export default async function handler(req, res) {
         return res.json({ customer: c?.[0] || null });
       }
 
+      // ─── COMPANY PROFILES ──────────────────────────────────────
+      case "get_companies": {
+        const { customer_id: gcId } = req.query;
+        const companies = await db(`company_profiles?customer_id=eq.${gcId}&order=is_default.desc,created_at.asc`);
+        return res.json({ companies });
+      }
+
+      case "create_company": {
+        const { customer_id: ccId, ...compFields } = req.body;
+        const allowed = ["company_name", "company_email", "company_phone", "company_address", "company_website", "registration_number", "tagline", "brand_colors", "social_facebook", "social_instagram", "social_twitter", "social_linkedin"];
+        const clean = { customer_id: ccId };
+        for (const k of allowed) { if (compFields[k] !== undefined) clean[k] = compFields[k]; }
+        // If first company, make it default
+        const existing = await db(`company_profiles?customer_id=eq.${ccId}`);
+        if (!existing || existing.length === 0) clean.is_default = true;
+        const c = await db("company_profiles", { method: "POST", body: clean });
+        return res.json({ company: c[0] });
+      }
+
+      case "update_company": {
+        const { company_id: ucId, ...compFields } = req.body;
+        const allowed = ["company_name", "company_email", "company_phone", "company_address", "company_website", "registration_number", "tagline", "brand_colors", "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "is_default"];
+        const clean = {};
+        for (const k of allowed) { if (compFields[k] !== undefined) clean[k] = compFields[k]; }
+        await db(`company_profiles?id=eq.${ucId}`, { method: "PATCH", body: clean });
+        const updated = await db(`company_profiles?id=eq.${ucId}&limit=1`);
+        return res.json({ company: updated[0] });
+      }
+
+      case "delete_company": {
+        const { company_id: dcId } = req.body;
+        await db(`company_profiles?id=eq.${dcId}`, { method: "DELETE", prefer: "return=minimal" });
+        return res.json({ success: true });
+      }
+
+      case "set_default_company": {
+        const { customer_id: sdcCustId, company_id: sdcCompId } = req.body;
+        // Unset all defaults for this customer
+        await db(`company_profiles?customer_id=eq.${sdcCustId}`, { method: "PATCH", body: { is_default: false } });
+        // Set the chosen one
+        await db(`company_profiles?id=eq.${sdcCompId}`, { method: "PATCH", body: { is_default: true } });
+        return res.json({ success: true });
+      }
+
       case "update_designer_profile": {
         const { designer_id, ...dFields } = req.body;
         const dAllowed = ["name", "phone", "city", "bio", "skills", "id_number", "address", "bank_name", "bank_account", "bank_branch", "id_document_path", "address_proof_path", "bank_proof_path", "profile_complete", "is_online"];
